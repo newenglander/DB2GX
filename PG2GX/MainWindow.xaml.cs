@@ -9,6 +9,8 @@ using Microsoft.Win32;
 using System.Collections.Generic;
 using System.Collections;
 using System.ComponentModel;
+using System.Windows.Input;
+using System.Windows;
 
 namespace PG2GX
 {
@@ -59,7 +61,7 @@ namespace PG2GX
             vmpostgres90DBs = new ArrayList();
         }
 
-        private void comboBox1_Loaded(object sender, RoutedEventArgs e)
+        private void databases_Loaded(object sender, RoutedEventArgs e)
         {
 
             
@@ -67,7 +69,7 @@ namespace PG2GX
 
         private void button1_Click(object sender, RoutedEventArgs e)
         {
-            if (this.comboBox1.SelectedIndex == -1)
+            if (this.databases.SelectedIndex == -1)
             {
                 MessageBox.Show("nichts ausgewählt!");
                 return;
@@ -77,7 +79,10 @@ namespace PG2GX
             
             try
             {
-                ODBCManager.CreateDSN(this.comboBox1.SelectedValue.ToString(), this.comboBox2.SelectedValue.ToString(), "PostgreSQL ANSI", true, this.comboBox1.SelectedValue.ToString());
+                String dbName = databases.SelectedValue.ToString();
+                String dbServerName = databaseServers.SelectedValue.ToString();
+                ODBCManager.CreateDSN(dbName , dbServerName, "PostgreSQL ANSI", true, dbName);
+                RegistryManager.CreateEntry("HISMBS-GX", dbName, dbServerName);
             }
             catch (Exception ex)
             {
@@ -91,17 +96,18 @@ namespace PG2GX
             // create registry entries
         }
 
-        private void comboBox2_Loaded(object sender, RoutedEventArgs e)
+        private void databaseServers_Loaded(object sender, RoutedEventArgs e)
         {
-            comboBox2.Items.Add("localhost");
-            comboBox2.Items.Add("castor");
-            comboBox2.Items.Add("vmpostgres90");
+            databaseServers.Items.Add("localhost");
+            databaseServers.Items.Add("castor");
+            databaseServers.Items.Add("vmpostgres90");
 
         }
 
-        private void comboBox2_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            String conn = "Server=" + comboBox2.SelectedItem.ToString() + ";Port=5432;Integrated Security=true;User Id=fsv;Password=fsv.fsv;Database=postgres;";
+            
+            String conn = "Server=" + databaseServers.SelectedItem.ToString() + ";Port=5432;Integrated Security=true;User Id=fsv;Password=fsv.fsv;Database=postgres;";
             NpgsqlConnection sqlConx;
             try
             {
@@ -115,22 +121,13 @@ namespace PG2GX
             }
 
             DataTable tblDatabases = sqlConx.GetSchema("Databases");
-            
-            
+                        
+            sqlConx.Close();            
 
-            sqlConx.Close();
-            sqlConx.Dispose();
-
-            
-
-            this.comboBox1.Items.Clear();
-
-            System.Collections.
+            this.databases.Items.Clear();
 
             ArrayList sortedDBs = new ArrayList();
 
-
-            //int count = 0;
             foreach (DataRow row in tblDatabases.Rows)
             {
 
@@ -151,16 +148,11 @@ namespace PG2GX
             }
 
             sortedDBs.Sort();
-            this.comboBox1.BeginInit();
-            this.comboBox1.EndInit();
-            this.comboBox1.Visibility = System.Windows.Visibility.Hidden;
+
             foreach (String blah1 in sortedDBs)
             {
-                this.comboBox1.Items.Add(blah1.ToString());
+                this.databases.Items.Add(blah1.ToString());
             }
-            this.comboBox1.Visibility = System.Windows.Visibility.Visible;
-            
-
         }
         
 
@@ -169,9 +161,14 @@ namespace PG2GX
 
     public static class RegistryManager
     {
-        private const string HIS_REG_PATH = "HKEY_LOCAL_MACHINE\\SOFTWARE\\HIS\\";
-        public static void CreateEntry(string productName)
+        private const string HIS_REG_PATH = "SOFTWARE\\HIS\\";
+        public static void CreateEntry(String productName, String databaseName, String databaseServer)
         {
+            var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + databaseName);
+            if (dbKey == null) throw new Exception("Registry key for DB was not created");
+            dbKey.SetValue("Name", databaseName);
+            dbKey.SetValue("DB-Server", databaseServer);            
+            dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
         }
     }
 
@@ -210,8 +207,16 @@ namespace PG2GX
             dsnKey.SetValue("Driver", driverPath);
             dsnKey.SetValue("LastUser", Environment.UserName);
             dsnKey.SetValue("Servername", server);
+            
             dsnKey.SetValue("Database", database);
             dsnKey.SetValue("Trusted_Connection", trustedConnection ? "Yes" : "No");
+
+            // HIS Extras
+            dsnKey.SetValue("MaxLongVarcharSize", "32766");
+            dsnKey.SetValue("MaxVarcharSize", "32766");
+            dsnKey.SetValue("ConnSettings", "set+search%5fpath+TO+mbs");
+            dsnKey.SetValue("Username", "fsv");
+            dsnKey.SetValue("Password", "fsv.fsv");
         }
 
         /// <summary>
