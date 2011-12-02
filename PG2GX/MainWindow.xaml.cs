@@ -217,6 +217,7 @@ namespace PG2GX
             dsnKey.SetValue("ConnSettings", "set+search%5fpath+TO+mbs");
             dsnKey.SetValue("Username", "fsv");
             dsnKey.SetValue("Password", "fsv.fsv");
+            dsnKey.SetValue("Protocol", "7.4-2");
         }
 
         /// <summary>
