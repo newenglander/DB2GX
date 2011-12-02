@@ -15,12 +15,7 @@ namespace PG2GX
     /// Interaktionslogik für MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
-    {
-        [DllImport("odbccp32", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern bool SQLConfigDataSourceW(UInt32 hwndParent, RequestFlags fRequest, string lpszDriver, string lpszAttributes);
-        //static extern bool SQLWriteDSNToIni(string lpszDSN, string lpszDriver);
-        //public static extern SQL_RETURN_CODE SQLInstallerError(int iError, ref int pfErrorCode, StringBuilder lpszErrorMsg, int cbErrorMsgMax, ref int pcbErrorMsg);
-
+    {        
         ArrayList localhostDBs;
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
