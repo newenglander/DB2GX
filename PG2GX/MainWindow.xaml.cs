@@ -1,16 +1,11 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Runtime.InteropServices;
 using System.Windows;
-using Npgsql;
-using System.Linq;
-using System.Text;
 using Microsoft.Win32;
-using System.Collections.Generic;
-using System.Collections;
-using System.ComponentModel;
-using System.Windows.Input;
-using System.Windows;
+using Npgsql;
 
 namespace PG2GX
 {
