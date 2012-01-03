@@ -10,6 +10,6 @@
 
 
         </StatusBar>
-        <ComboBox Height="34" HorizontalAlignment="Left" Margin="34,12,0,0" Name="databaseServers" VerticalAlignment="Top" Width="149" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" />
+        <ComboBox Height="34" HorizontalAlignment="Left" Margin="34,12,0,0" Name="databaseServers" VerticalAlignment="Top" Width="149" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding Path=MyComboBoxItem}" DisplayMemberPath="Name" SelectedValuePath="Value" SelectedValue="{Binding Path=MyComboBoxItem.Name}" />
     </Grid>
 </Window>
