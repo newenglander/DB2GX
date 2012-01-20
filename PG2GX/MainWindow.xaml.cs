@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Controls;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,17 +54,11 @@ namespace PG2GX
             localhostDBs = new ArrayList();
             castorDBs = new ArrayList();
             vmpostgres90DBs = new ArrayList();
-        }
-
-        private void databases_Loaded(object sender, RoutedEventArgs e)
-        {
-
-            
-        }
+        }        
 
         private void button1_Click(object sender, RoutedEventArgs e)
         {
-            if (this.databases.SelectedIndex == -1)
+            if ((this.databaseServers.SelectedIndex == -1) || (this.databases.SelectedIndex == -1) || (this.hisProduct.SelectedIndex == -1))
             {
                 MessageBox.Show("nichts ausgewählt!");
                 return;
@@ -73,12 +68,14 @@ namespace PG2GX
             {
                 String dbName = databases.SelectedValue.ToString();
                 String dbServerName = databaseServers.SelectedValue.ToString();
+                String hisProductName = ((ComboBoxItem)hisProduct.SelectedItem).Name;
                 if (ODBCManager.DSNExists(dbName))
                 {
                     MessageBoxResult res = MessageBox.Show("ODBC Eintrag " + dbName + " exisitiert schon! Fortfahren?", "Warnung", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.No) return;
                 }
-                if (RegistryManager.EntryExists("HISMBS-GX", dbName, dbServerName))
+
+                if (RegistryManager.EntryExists(hisProductName, dbName, dbServerName))
                 {
                     MessageBoxResult res = MessageBox.Show("Registry Eintrag " + dbName + " exisitiert schon! Fortfahren?", "Warnung", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.No) return;
@@ -86,7 +83,7 @@ namespace PG2GX
                 // create odbc connection
                 ODBCManager.CreateDSN(dbName, dbServerName, "PostgreSQL ANSI", true, dbName);
                 // create registry entries
-                RegistryManager.CreateEntry("HISMBS-GX", dbName, dbServerName);
+                RegistryManager.CreateEntry(hisProductName, dbName, dbServerName);
             }
             catch (Exception ex)
             {
@@ -98,13 +95,13 @@ namespace PG2GX
 
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
         {
-            databaseServers.Items.Add(new MyComboBoxItem("localhost"));
-            databaseServers.Items.Add(new MyComboBoxItem("castor"));
-            databaseServers.Items.Add(new MyComboBoxItem("vmpostgres90"));
+            databaseServers.Items.Add(new MyComboBoxItem("localhost", "5432"));
+            databaseServers.Items.Add(new MyComboBoxItem("castor1", "5432"));
+            databaseServers.Items.Add(new MyComboBoxItem("castor2", "5431"));
+            databaseServers.Items.Add(new MyComboBoxItem("vmpostgres90", "5432"));
 
             //ArrayList serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
-            List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
-            
+            List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);            
 
             foreach (Win32.NetApi32.SERVER_INFO_101 server in serverList)
             {
@@ -119,13 +116,12 @@ namespace PG2GX
                         databaseServers.Items.Add(new MyComboBoxItem(nameToShow, server.sv101_name));
                     }
                 }
-            }
-            
+            }            
         }
 
-        private NpgsqlConnection openDBConnection(String host, bool silent)
+        private NpgsqlConnection openDBConnection(String host, String port, bool silent)
         {
-            String conn = "Server=" + host + ";Port=5432;Integrated Security=true;User Id=fsv;Password=fsv.fsv;Database=postgres;Timeout=1;CommandTimeout=1;";
+            String conn = "Server=" + host + ";Port=" + port + ";Integrated Security=true;User Id=fsv;Password=fsv.fsv;Database=postgres;Timeout=1;CommandTimeout=1;";
             NpgsqlConnection sqlConx = null;
             try
             {
@@ -145,7 +141,7 @@ namespace PG2GX
 
         private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            NpgsqlConnection sqlConx = openDBConnection(((MyComboBoxItem)databaseServers.SelectedItem).Value, false);
+            NpgsqlConnection sqlConx = openDBConnection(((MyComboBoxItem)databaseServers.SelectedItem).Name.TrimEnd('1', '2'), ((MyComboBoxItem)databaseServers.SelectedItem).Value, false);
 
             if (sqlConx == null) return;
 
@@ -159,10 +155,8 @@ namespace PG2GX
 
             foreach (DataRow row in tblDatabases.Rows)
             {
-
                 try
-                {
-                    
+                {                    
                     String dbName = row["database_name"].ToString();
                     if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1"))
                     {
@@ -178,13 +172,17 @@ namespace PG2GX
 
             sortedDBs.Sort();
 
-            foreach (String blah1 in sortedDBs)
+            foreach (String db in sortedDBs)
             {
-                this.databases.Items.Add(blah1.ToString());
+                this.databases.Items.Add(db.ToString());
             }
         }
-        
 
+        private void hisProduct_Loaded(object sender, RoutedEventArgs e)
+        {
+            hisProduct.Items.Add("HISMBS-GX");
+            hisProduct.Items.Add("HISFSV-GX");
+        }     
     }
 
     public class MyComboBoxItem
