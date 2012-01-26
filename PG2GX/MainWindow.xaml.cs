@@ -24,6 +24,8 @@ namespace PG2GX
         ArrayList localhostDBs;
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
+        String HISMBSGX = "HISMBS-GX";
+        String HISFSVGX = "HISFSV-GX";
 
         public enum SQL_RETURN_CODE : int
         {
@@ -45,7 +47,7 @@ namespace PG2GX
             ODBC_CONFIG_SYS_DSN = 5,
             ODBC_REMOVE_SYS_DSN = 6,
             ODBC_REMOVE_DEFAULT_DSN = 7
-        }
+        }       
 
 
         public MainWindow()
@@ -54,6 +56,8 @@ namespace PG2GX
             localhostDBs = new ArrayList();
             castorDBs = new ArrayList();
             vmpostgres90DBs = new ArrayList();
+
+            databaseServers.Focus();
         }        
 
         private void button1_Click(object sender, RoutedEventArgs e)
@@ -67,23 +71,24 @@ namespace PG2GX
             try
             {
                 String dbName = databases.SelectedValue.ToString();
-                String dbServerName = databaseServers.SelectedValue.ToString();
-                String hisProductName = ((ComboBoxItem)hisProduct.SelectedItem).Name;
-                if (ODBCManager.DSNExists(dbName))
+                String dbServerName = ((MyComboBoxItem)(databaseServers.SelectedItem)).Name;
+                String hisProductName = hisProduct.SelectedValue.ToString();
+                String entryName = dbServerName + "-" + dbName;
+                if (ODBCManager.DSNExists(entryName))
                 {
-                    MessageBoxResult res = MessageBox.Show("ODBC Eintrag " + dbName + " exisitiert schon! Fortfahren?", "Warnung", MessageBoxButton.YesNo);
+                    MessageBoxResult res = MessageBox.Show("ODBC Eintrag " + entryName + " exisitiert schon! Fortfahren?", "Warnung", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.No) return;
                 }
 
-                if (RegistryManager.EntryExists(hisProductName, dbName, dbServerName))
+                if (RegistryManager.EntryExists(hisProductName, entryName, dbServerName))
                 {
                     MessageBoxResult res = MessageBox.Show("Registry Eintrag " + dbName + " exisitiert schon! Fortfahren?", "Warnung", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.No) return;
                 }
                 // create odbc connection
-                ODBCManager.CreateDSN(dbName, dbServerName, "PostgreSQL ANSI", true, dbName);
+                ODBCManager.CreateDSN(entryName, dbServerName, "PostgreSQL ANSI", true, dbName, (hisProductName == HISMBSGX));
                 // create registry entries
-                RegistryManager.CreateEntry(hisProductName, dbName, dbServerName);
+                RegistryManager.CreateEntry(hisProductName, entryName, dbName, dbServerName);
             }
             catch (Exception ex)
             {
@@ -211,9 +216,9 @@ namespace PG2GX
             return dbKey != null;
         }
 
-        public static void CreateEntry(String productName, String databaseName, String databaseServer)
+        public static void CreateEntry(String productName, String entryName, String databaseName, String databaseServer)
         {
-            var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + databaseName);
+            var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + entryName);
             if (dbKey == null) throw new Exception("Registry key for DB was not created");
             dbKey.SetValue("Name", databaseName);
             dbKey.SetValue("DB-Server", databaseServer);            
@@ -237,15 +242,15 @@ namespace PG2GX
         /// <param name="driverName">Name of the driver to use</param>
         /// <param name="trustedConnection">True to use NT authentication, false to require applications to supply username/password in the connection string</param>
         /// <param name="database">Name of the datbase to connect to</param>
-        public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database)
+        public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, bool setConnSettings)
         {
             // Lookup driver path from driver name
-            var driverKey = Registry.LocalMachine.CreateSubKey(ODBCINST_INI_REG_PATH + driverName);
+            var driverKey = Registry.LocalMachine.OpenSubKey(ODBCINST_INI_REG_PATH + driverName);
             if (driverKey == null) throw new Exception(string.Format("ODBC Registry key for driver '{0}' does not exist", driverName));
             string driverPath = driverKey.GetValue("Driver").ToString();
 
             // Add value to odbc data sources
-            var datasourcesKey = Registry.LocalMachine.CreateSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources");
+            var datasourcesKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources", true);
             if (datasourcesKey == null) throw new Exception("ODBC Registry key for datasources does not exist");
             datasourcesKey.SetValue(dsnName, driverName);
 
@@ -263,7 +268,8 @@ namespace PG2GX
             // HIS Extras
             dsnKey.SetValue("MaxLongVarcharSize", "32766");
             dsnKey.SetValue("MaxVarcharSize", "32766");
-            dsnKey.SetValue("ConnSettings", "set+search%5fpath+TO+mbs");
+            if (setConnSettings)
+                dsnKey.SetValue("ConnSettings", "set+search%5fpath+TO+mbs");
             dsnKey.SetValue("Username", "fsv");
             dsnKey.SetValue("Password", "fsv.fsv");
             dsnKey.SetValue("Protocol", "7.4-2");

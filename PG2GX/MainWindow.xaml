@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MainWindow" Height="350" Width="525">
     <Grid>
-        <ComboBox Height="34" HorizontalAlignment="Left" Margin="34,74,0,0" Name="databases" VerticalAlignment="Top" Width="149" />
+        
         <Button Content="Einrichten" Height="36" HorizontalAlignment="Right" Margin="0,191,320,0" Name="button1" VerticalAlignment="Top" Width="136" Click="button1_Click" />
         <StatusBar Height="23" HorizontalAlignment="Left" Margin="0,293,0,0" Name="statusBar1" VerticalAlignment="Top" Width="514">            
             <TextBlock Name="TextBlockStatus" />
@@ -11,6 +11,7 @@
 
         </StatusBar>
         <ComboBox Height="34" HorizontalAlignment="Left" Margin="34,12,0,0" Name="databaseServers" VerticalAlignment="Top" Width="149" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding Path=MyComboBoxItem}" DisplayMemberPath="Name" SelectedValuePath="Value" SelectedValue="{Binding Path=MyComboBoxItem.Name}" />
+        <ComboBox Height="34" HorizontalAlignment="Left" Margin="34,74,0,0" Name="databases" VerticalAlignment="Top" Width="149" />
         <ComboBox Height="34" HorizontalAlignment="Left" Margin="34,134,0,0" Name="hisProduct" VerticalAlignment="Top" Width="149" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" />
     </Grid>
 </Window>
