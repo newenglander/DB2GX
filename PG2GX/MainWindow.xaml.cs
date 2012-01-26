@@ -72,6 +72,7 @@ namespace PG2GX
             {
                 String dbName = databases.SelectedValue.ToString();
                 String dbServerName = ((MyComboBoxItem)(databaseServers.SelectedItem)).Name;
+                String dbServerPort = ((MyComboBoxItem)(databaseServers.SelectedItem)).Value;
                 String hisProductName = hisProduct.SelectedValue.ToString();
                 String entryName = dbServerName + "-" + dbName;
                 if (ODBCManager.DSNExists(entryName))
@@ -86,10 +87,33 @@ namespace PG2GX
                     if (res == MessageBoxResult.No) return;
                 }
                 // create odbc connection
-                ODBCManager.CreateDSN(entryName, dbServerName, "PostgreSQL ANSI", true, dbName, (hisProductName == HISMBSGX));
+                ODBCManager.CreateDSN(entryName, dbServerName, "PostgreSQL ANSI", true, dbName, dbServerPort, (hisProductName == HISMBSGX));
                 // create registry entries
-                RegistryManager.CreateEntry(hisProductName, entryName, dbName, dbServerName);
-            }
+                RegistryManager.CreateEntry(hisProductName, entryName, dbServerName);
+
+                // add lang to db, if necessary
+                NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort ,false);
+                NpgsqlCommand command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
+                                                            RETURNS VOID
+                                                            LANGUAGE SQL
+                                                            AS $$
+                                                             CREATE TRUSTED PROCEDURAL LANGUAGE 'plpgsql'
+                                                             HANDLER plpgsql_call_handler
+                                                             VALIDATOR plpgsql_validator;
+                                                             ALTER LANGUAGE plpgsql OWNER TO postgres;
+                                                            $$;
+                                                            SELECT
+                                                                CASE
+                                                                WHEN EXISTS(
+                                                                    SELECT 1
+                                                                    FROM pg_catalog.pg_language
+                                                                    WHERE lanname='plpgsql'
+                                                                )
+                                                                THEN NULL
+                                                                ELSE make_plpgsql() END;
+                                                            DROP FUNCTION make_plpgsql();", con);
+                int returnCode = command.ExecuteNonQuery();
+                }
             catch (Exception ex)
             {
                 TextBlockStatus.Text = ex.Message;
@@ -124,9 +148,10 @@ namespace PG2GX
             }            
         }
 
-        private NpgsqlConnection openDBConnection(String host, String port, bool silent)
+        private NpgsqlConnection openDBConnection(String host, String db, String port, bool silent)
         {
-            String conn = "Server=" + host + ";Port=" + port + ";Integrated Security=true;User Id=fsv;Password=fsv.fsv;Database=postgres;Timeout=1;CommandTimeout=1;";
+            if (db == "") db = "postgres";
+            String conn = "Server=" + host + ";Port=" + port + ";Integrated Security=true;User Id=fsv;Password=fsv.fsv;Database=" + db + ";Timeout=1;CommandTimeout=1;";
             NpgsqlConnection sqlConx = null;
             try
             {
@@ -146,7 +171,7 @@ namespace PG2GX
 
         private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            NpgsqlConnection sqlConx = openDBConnection(((MyComboBoxItem)databaseServers.SelectedItem).Name.TrimEnd('1', '2'), ((MyComboBoxItem)databaseServers.SelectedItem).Value, false);
+            NpgsqlConnection sqlConx = openDBConnection(((MyComboBoxItem)databaseServers.SelectedItem).Name.TrimEnd('1', '2'), "postgres", ((MyComboBoxItem)databaseServers.SelectedItem).Value, false);
 
             if (sqlConx == null) return;
 
@@ -185,8 +210,8 @@ namespace PG2GX
 
         private void hisProduct_Loaded(object sender, RoutedEventArgs e)
         {
-            hisProduct.Items.Add("HISMBS-GX");
-            hisProduct.Items.Add("HISFSV-GX");
+            hisProduct.Items.Add(HISMBSGX);
+            hisProduct.Items.Add(HISFSVGX);
         }     
     }
 
@@ -216,11 +241,11 @@ namespace PG2GX
             return dbKey != null;
         }
 
-        public static void CreateEntry(String productName, String entryName, String databaseName, String databaseServer)
+        public static void CreateEntry(String productName, String entryName, String databaseServer)
         {
             var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + entryName);
             if (dbKey == null) throw new Exception("Registry key for DB was not created");
-            dbKey.SetValue("Name", databaseName);
+            dbKey.SetValue("Name", entryName);
             dbKey.SetValue("DB-Server", databaseServer);            
             dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
         }
@@ -242,7 +267,9 @@ namespace PG2GX
         /// <param name="driverName">Name of the driver to use</param>
         /// <param name="trustedConnection">True to use NT authentication, false to require applications to supply username/password in the connection string</param>
         /// <param name="database">Name of the datbase to connect to</param>
-        public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, bool setConnSettings)
+        /// <param name="port">Port of server</param>
+        /// <param name="setConnSettings">TRUE: Set search_path TO mbs</param>
+        public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, string port, bool setConnSettings)
         {
             // Lookup driver path from driver name
             var driverKey = Registry.LocalMachine.OpenSubKey(ODBCINST_INI_REG_PATH + driverName);
@@ -261,6 +288,7 @@ namespace PG2GX
             dsnKey.SetValue("Driver", driverPath);
             dsnKey.SetValue("LastUser", Environment.UserName);
             dsnKey.SetValue("Servername", server);
+            dsnKey.SetValue("Port", port);
             
             dsnKey.SetValue("Database", database);
             dsnKey.SetValue("Trusted_Connection", trustedConnection ? "Yes" : "No");
@@ -269,7 +297,7 @@ namespace PG2GX
             dsnKey.SetValue("MaxLongVarcharSize", "32766");
             dsnKey.SetValue("MaxVarcharSize", "32766");
             if (setConnSettings)
-                dsnKey.SetValue("ConnSettings", "set+search%5fpath+TO+mbs");
+                dsnKey.SetValue("ConnSettings", "SET+search%5fpath+TO+mbs");
             dsnKey.SetValue("Username", "fsv");
             dsnKey.SetValue("Password", "fsv.fsv");
             dsnKey.SetValue("Protocol", "7.4-2");
@@ -432,9 +460,6 @@ namespace Win32
             return NetMessageBufferSend(serverName, messageName, fromName, strMsgBuffer, iMsgBufferLen * 2);
         }
 
-        
-
-        //public static ArrayList GetServerList(NetApi32.SV_101_TYPES ServerType)
         public static List<SERVER_INFO_101> GetServerList(NetApi32.SV_101_TYPES ServerType)
         {
             int entriesread = 0, totalentries = 0;
