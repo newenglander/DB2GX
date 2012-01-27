@@ -125,8 +125,8 @@ namespace PG2GX
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
         {
             databaseServers.Items.Add(new MyComboBoxItem("localhost", "5432"));
-            databaseServers.Items.Add(new MyComboBoxItem("castor1", "5432"));
-            databaseServers.Items.Add(new MyComboBoxItem("castor2", "5431"));
+            databaseServers.Items.Add(new MyComboBoxItem("castor", "5432"));
+            databaseServers.Items.Add(new MyComboBoxItem("castor", "5431"));
             databaseServers.Items.Add(new MyComboBoxItem("vmpostgres90", "5432"));
 
             //ArrayList serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
