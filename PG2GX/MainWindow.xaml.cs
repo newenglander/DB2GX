@@ -113,13 +113,15 @@ namespace PG2GX
                                                                 ELSE make_plpgsql() END;
                                                             DROP FUNCTION make_plpgsql();", con);
                 int returnCode = command.ExecuteNonQuery();
+
+                TextBlockStatus.Text = "Datenbank " + dbName + "erfolg eingerichtet; Verfügbar über Eintrag " + entryName;
                 }
             catch (Exception ex)
             {
                 TextBlockStatus.Text = ex.Message;
                 return;
             }
-            TextBlockStatus.Text = "Erfolg";
+            
         }
 
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
@@ -142,7 +144,8 @@ namespace PG2GX
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
-                        databaseServers.Items.Add(new MyComboBoxItem(nameToShow, server.sv101_name));
+                        // commented out, needs to be fixed
+                        //databaseServers.Items.Add(new MyComboBoxItem(nameToShow, server.sv101_name));
                     }
                 }
             }            
@@ -171,7 +174,10 @@ namespace PG2GX
 
         private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            NpgsqlConnection sqlConx = openDBConnection(((MyComboBoxItem)databaseServers.SelectedItem).Name.TrimEnd('1', '2'), "postgres", ((MyComboBoxItem)databaseServers.SelectedItem).Value, false);
+            String currentDBServer = ((MyComboBoxItem)databaseServers.SelectedItem).Name;
+            TextBlockStatus.Text = "Verfügbare Datenbanken werden in " + currentDBServer + " gesucht.";
+
+            NpgsqlConnection sqlConx = openDBConnection(currentDBServer, "postgres", ((MyComboBoxItem)databaseServers.SelectedItem).Value, false);
 
             if (sqlConx == null) return;
 
@@ -206,6 +212,7 @@ namespace PG2GX
             {
                 this.databases.Items.Add(db.ToString());
             }
+            TextBlockStatus.Text = "Server " + currentDBServer + " hat " + databases.Items.Count + " Datenbanken verfügbar.";
         }
 
         private void hisProduct_Loaded(object sender, RoutedEventArgs e)
