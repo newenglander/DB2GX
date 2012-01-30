@@ -11,6 +11,7 @@ using Npgsql;
 using System.DirectoryServices.ActiveDirectory;
 using System.Web;
 using System.Net.Sockets;
+using System.ComponentModel;
 
 namespace PG2GX
 {
@@ -24,8 +25,8 @@ namespace PG2GX
         ArrayList localhostDBs;
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
-        String HISMBSGX = "HISMBS-GX";
-        String HISFSVGX = "HISFSV-GX";
+        public const String HISMBSGX = "HISMBS-GX";
+        public const String HISFSVGX = "HISFSV-GX";
 
         public enum SQL_RETURN_CODE : int
         {
@@ -59,8 +60,6 @@ namespace PG2GX
 
             databaseServers.Focus();
         }        
-
-
 
         private void createNewEntry()
         {
@@ -225,7 +224,51 @@ namespace PG2GX
         private void button1_Click(object sender, RoutedEventArgs e)
         {
             createNewEntry();
-        }     
+        }
+
+        private void comboBox1_Loaded(object sender, RoutedEventArgs e)
+        {
+            // get all entries, in ODBC and in Registry
+            comboBox1.Items.Clear();
+            // ODBC
+            string[] values = ODBCManager.GetAllDSN();
+
+            foreach (String entry in values)
+            {
+                if (comboBox1.Items.IndexOf(entry) == -1)
+                    ;
+            }
+
+            // Registry
+            values = values.Concat(RegistryManager.GetAllEntries()).Distinct().ToArray();
+            Array.Sort(values);
+            
+            foreach (String entry in values)
+            {
+                    comboBox1.Items.Add(entry);
+            }
+
+
+
+            //SortDescription sd = new SortDescription("Content", ListSortDirection.Ascending);
+            //comboBox1.Items.SortDescriptions.Add(sd);
+            
+        }
+
+        private void button2_Click(object sender, RoutedEventArgs e)
+        {
+            if (comboBox1.SelectedItem == null)
+            {
+                MessageBox.Show("nichts ausgewählt!");
+                return;
+            }
+            ODBCManager.RemoveDSN(comboBox1.SelectedValue.ToString());
+            RegistryManager.DeleteEntry(comboBox1.SelectedValue.ToString());
+            // refresh list
+            comboBox1_Loaded(null, null);
+
+        }
+        
     }
 
     public class MyComboBoxItem
@@ -262,6 +305,25 @@ namespace PG2GX
             dbKey.SetValue("DB-Server", databaseServer);            
             dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
         }
+
+        public static string[] GetAllEntries()
+        {
+            string[] returnValues = Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank").GetSubKeyNames();
+            string[] tempValues = Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank").GetSubKeyNames();
+            int originalLength = returnValues.Length;
+            Array.Resize<string>(ref returnValues, returnValues.Length + tempValues.Length);
+            Array.Copy(tempValues, 0, returnValues, originalLength, tempValues.Length - 1);
+            return returnValues;
+        }
+
+        public static void DeleteEntry(string entry)
+        {
+            if (Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank\\" + entry) != null)
+                Registry.LocalMachine.DeleteSubKeyTree(HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank\\" + entry);
+
+            if (Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank\\" + entry) != null)
+                Registry.LocalMachine.DeleteSubKeyTree(HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank\\" + entry);
+        }
     }
 
     ///<summary>
@@ -285,17 +347,16 @@ namespace PG2GX
         public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, string port, bool setConnSettings)
         {
             // Lookup driver path from driver name
-            var driverKey = Registry.LocalMachine.OpenSubKey(ODBCINST_INI_REG_PATH + driverName);
+            RegistryKey driverKey = Registry.LocalMachine.OpenSubKey(ODBCINST_INI_REG_PATH + driverName);
             if (driverKey == null) throw new Exception(string.Format("ODBC Registry key for driver '{0}' does not exist", driverName));
             string driverPath = driverKey.GetValue("Driver").ToString();
 
             // Add value to odbc data sources
-            var datasourcesKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources", true);
-            if (datasourcesKey == null) throw new Exception("ODBC Registry key for datasources does not exist");
+            RegistryKey datasourcesKey = GetDatasourcesKey();
             datasourcesKey.SetValue(dsnName, driverName);
 
             // Create new key in odbc.ini with dsn name and add values
-            var dsnKey = Registry.LocalMachine.CreateSubKey(ODBC_INI_REG_PATH + dsnName);
+            RegistryKey dsnKey = Registry.LocalMachine.CreateSubKey(ODBC_INI_REG_PATH + dsnName);
             if (dsnKey == null) throw new Exception("ODBC Registry key for DSN was not created");
             dsnKey.SetValue("Database", database);            
             dsnKey.SetValue("Driver", driverPath);
@@ -316,6 +377,21 @@ namespace PG2GX
             dsnKey.SetValue("Protocol", "7.4-2");
         }
 
+        private static RegistryKey GetDatasourcesKey()
+        {
+            RegistryKey datasourcesKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources", true);
+            if (datasourcesKey == null) throw new Exception("ODBC Registry key for datasources does not exist");
+            return datasourcesKey;
+        }
+
+        public static string[] GetAllDSN()
+        {
+            RegistryKey datasourcesKey = GetDatasourcesKey();
+            string[] returnValues = datasourcesKey.GetValueNames();
+            Array.Sort(returnValues);             
+            return returnValues;
+        }
+
         /// <summary>
         /// Removes a DSN entry
         /// </summary>
@@ -323,12 +399,14 @@ namespace PG2GX
         public static void RemoveDSN(string dsnName)
         {
             // Remove DSN key
-            Registry.LocalMachine.DeleteSubKeyTree(ODBC_INI_REG_PATH + dsnName);
+            if (Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + dsnName) != null)
+                Registry.LocalMachine.DeleteSubKeyTree(ODBC_INI_REG_PATH + dsnName);
 
             // Remove DSN name from values list in ODBC Data Sources key
-            var datasourcesKey = Registry.LocalMachine.CreateSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources");
+            RegistryKey datasourcesKey = Registry.LocalMachine.CreateSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources");
             if (datasourcesKey == null) throw new Exception("ODBC Registry key for datasources does not exist");
-            datasourcesKey.DeleteValue(dsnName);
+            if (datasourcesKey.GetValue(dsnName) != null)
+                datasourcesKey.DeleteValue(dsnName);
         }
 
         ///<summary>
@@ -337,8 +415,8 @@ namespace PG2GX
         ///<param name="dsnName"></param>
         ///<returns></returns>
         public static bool DSNExists(string dsnName)
-        {            
-            var dsnKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + dsnName);
+        {
+            RegistryKey dsnKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + dsnName);
 
             return dsnKey != null;
         }
@@ -349,14 +427,14 @@ namespace PG2GX
         ///<returns></returns>
         public static string[] GetInstalledDrivers()
         {
-            var driversKey = Registry.LocalMachine.CreateSubKey(ODBCINST_INI_REG_PATH + "ODBC Drivers");
+            RegistryKey driversKey = Registry.LocalMachine.CreateSubKey(ODBCINST_INI_REG_PATH + "ODBC Drivers");
             if (driversKey == null) throw new Exception("ODBC Registry key for drivers does not exist");
 
-            var driverNames = driversKey.GetValueNames();
+            String[] driverNames = driversKey.GetValueNames();
 
-            var ret = new List<string>();
+            List<string> ret = new List<string>();
 
-            foreach (var driverName in driverNames)
+            foreach (String driverName in driverNames)
             {
                 if (driverName != "(Default)")
                 {
