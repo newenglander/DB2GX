@@ -60,14 +60,16 @@ namespace PG2GX
             databaseServers.Focus();
         }        
 
-        private void button1_Click(object sender, RoutedEventArgs e)
+
+
+        private void createNewEntry()
         {
             if ((this.databaseServers.SelectedIndex == -1) || (this.databases.SelectedIndex == -1) || (this.hisProduct.SelectedIndex == -1))
             {
                 MessageBox.Show("nichts ausgewählt!");
                 return;
             }
-            
+
             try
             {
                 String dbName = databases.SelectedValue.ToString();
@@ -92,7 +94,7 @@ namespace PG2GX
                 RegistryManager.CreateEntry(hisProductName, entryName, dbServerName);
 
                 // add lang to db, if necessary
-                NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort ,false);
+                NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort, false);
                 NpgsqlCommand command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
                                                             RETURNS VOID
                                                             LANGUAGE SQL
@@ -115,13 +117,12 @@ namespace PG2GX
                 int returnCode = command.ExecuteNonQuery();
 
                 TextBlockStatus.Text = "Datenbank " + dbName + "erfolg eingerichtet; Verfügbar über Eintrag " + entryName;
-                }
+            }
             catch (Exception ex)
             {
                 TextBlockStatus.Text = ex.Message;
                 return;
             }
-            
         }
 
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
@@ -219,6 +220,11 @@ namespace PG2GX
         {
             hisProduct.Items.Add(HISMBSGX);
             hisProduct.Items.Add(HISFSVGX);
+        }
+
+        private void button1_Click(object sender, RoutedEventArgs e)
+        {
+            createNewEntry();
         }     
     }
 
