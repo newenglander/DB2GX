@@ -233,26 +233,14 @@ namespace PG2GX
             // ODBC
             string[] values = ODBCManager.GetAllDSN();
 
-            foreach (String entry in values)
-            {
-                if (comboBox1.Items.IndexOf(entry) == -1)
-                    ;
-            }
-
             // Registry
             values = values.Concat(RegistryManager.GetAllEntries()).Distinct().ToArray();
             Array.Sort(values);
             
             foreach (String entry in values)
             {
-                    comboBox1.Items.Add(entry);
+                comboBox1.Items.Add(entry);
             }
-
-
-
-            //SortDescription sd = new SortDescription("Content", ListSortDirection.Ascending);
-            //comboBox1.Items.SortDescriptions.Add(sd);
-            
         }
 
         private void button2_Click(object sender, RoutedEventArgs e)
