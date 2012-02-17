@@ -1,27 +1,25 @@
 ﻿using System;
-using System.Windows.Controls;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.ComponentModel;
 using System.Data;
+using System.DirectoryServices.ActiveDirectory;
+using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Web;
 using System.Windows;
+using System.Windows.Controls;
 using Microsoft.Win32;
 using Npgsql;
-using System.DirectoryServices.ActiveDirectory;
-using System.Web;
-using System.Net.Sockets;
-using System.ComponentModel;
 
 namespace PG2GX
 {
-    
-
     /// <summary>
     /// Interaktionslogik für MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
-    {        
+    {
         ArrayList localhostDBs;
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
@@ -39,7 +37,7 @@ namespace PG2GX
             SQL_NO_DATA = 100
         }
 
-        enum RequestFlags : int
+        private enum RequestFlags : int
         {
             ODBC_ADD_DSN = 1,
             ODBC_CONFIG_DSN = 2,
@@ -48,8 +46,7 @@ namespace PG2GX
             ODBC_CONFIG_SYS_DSN = 5,
             ODBC_REMOVE_SYS_DSN = 6,
             ODBC_REMOVE_DEFAULT_DSN = 7
-        }       
-
+        }
 
         public MainWindow()
         {
@@ -59,7 +56,7 @@ namespace PG2GX
             vmpostgres90DBs = new ArrayList();
 
             databaseServers.Focus();
-        }        
+        }
 
         private void createNewEntry()
         {
@@ -130,17 +127,18 @@ namespace PG2GX
             databaseServers.Items.Add(new MyComboBoxItem("castor", "5432"));
             databaseServers.Items.Add(new MyComboBoxItem("castor", "5431"));
             databaseServers.Items.Add(new MyComboBoxItem("vmpostgres90", "5432"));
+            databaseServers.Items.Add(new MyComboBoxItem("his2843", "5432"));
 
             //ArrayList serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
-            List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);            
+            List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
 
             foreach (Win32.NetApi32.SERVER_INFO_101 server in serverList)
             {
                 String nameToShow = server.sv101_comment;
                 if (nameToShow.Contains("UB1"))
-                {     
+                {
                     // this test takes too long
-                    //if (openDBConnection(server.sv101_name, true) != null)                    
+                    //if (openDBConnection(server.sv101_name, true) != null)
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
@@ -148,7 +146,7 @@ namespace PG2GX
                         //databaseServers.Items.Add(new MyComboBoxItem(nameToShow, server.sv101_name));
                     }
                 }
-            }            
+            }
         }
 
         private NpgsqlConnection openDBConnection(String host, String db, String port, bool silent)
@@ -159,7 +157,7 @@ namespace PG2GX
             try
             {
                 sqlConx = new NpgsqlConnection(conn);
-                sqlConx.Open();                
+                sqlConx.Open();
             }
             catch (Exception ex)
             {
@@ -182,8 +180,8 @@ namespace PG2GX
             if (sqlConx == null) return;
 
             DataTable tblDatabases = sqlConx.GetSchema("Databases");
-                        
-            sqlConx.Close();            
+
+            sqlConx.Close();
 
             this.databases.Items.Clear();
 
@@ -192,12 +190,12 @@ namespace PG2GX
             foreach (DataRow row in tblDatabases.Rows)
             {
                 try
-                {                    
+                {
                     String dbName = row["database_name"].ToString();
                     if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1"))
                     {
                         sortedDBs.Add(dbName);
-                    }                    
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -210,7 +208,7 @@ namespace PG2GX
 
             foreach (String db in sortedDBs)
             {
-                this.databases.Items.Add(db.ToString());
+                this.databases.Items.Add(db);
             }
             TextBlockStatus.Text = "Server " + currentDBServer + " hat " + databases.Items.Count + " Datenbanken verfügbar.";
         }
@@ -236,7 +234,7 @@ namespace PG2GX
             // Registry
             values = values.Concat(RegistryManager.GetAllEntries()).Distinct().ToArray();
             Array.Sort(values);
-            
+
             foreach (String entry in values)
             {
                 comboBox1.Items.Add(entry);
@@ -250,18 +248,24 @@ namespace PG2GX
                 MessageBox.Show("nichts ausgewählt!");
                 return;
             }
-            ODBCManager.RemoveDSN(comboBox1.SelectedValue.ToString());
-            RegistryManager.DeleteEntry(comboBox1.SelectedValue.ToString());
+            String rememberItem = comboBox1.SelectedValue.ToString();
+            ODBCManager.RemoveDSN(rememberItem);
+            RegistryManager.DeleteEntry(rememberItem);
             // refresh list
             comboBox1_Loaded(null, null);
-
+            TextBlockStatus.Text = "Eintrag " + rememberItem + " gelöscht.";
         }
-        
+
+        private void comboBox1_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            textBox1.Text = "Treiber: " + ODBCManager.GetValue(comboBox1.SelectedValue.ToString(), "Driver");
+        }
     }
 
     public class MyComboBoxItem
     {
         public string Name { get; set; }
+
         public string Value { get; set; }
 
         public MyComboBoxItem(string name, string value)
@@ -269,6 +273,7 @@ namespace PG2GX
             Name = name;
             Value = value;
         }
+
         public MyComboBoxItem(string name)
         {
             Name = name;
@@ -279,6 +284,7 @@ namespace PG2GX
     public static class RegistryManager
     {
         private const string HIS_REG_PATH = "SOFTWARE\\HIS\\";
+
         public static bool EntryExists(String productName, String databaseName, String databaseServer)
         {
             var dbKey = Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + databaseName);
@@ -290,7 +296,7 @@ namespace PG2GX
             var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + entryName);
             if (dbKey == null) throw new Exception("Registry key for DB was not created");
             dbKey.SetValue("Name", entryName);
-            dbKey.SetValue("DB-Server", databaseServer);            
+            dbKey.SetValue("DB-Server", databaseServer);
             dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
         }
 
@@ -322,6 +328,17 @@ namespace PG2GX
         private const string ODBC_INI_REG_PATH = "SOFTWARE\\ODBC\\ODBC.INI\\";
         private const string ODBCINST_INI_REG_PATH = "SOFTWARE\\ODBC\\ODBCINST.INI\\";
 
+        public static String GetValue(string dsnName, string key)
+        {
+            String retval = "";
+            RegistryKey dsnKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + dsnName);
+            if (dsnKey != null)
+            {
+                retval = dsnKey.GetValue(key).ToString();
+            }
+            return retval;
+        }
+
         /// <summary>
         /// Creates a new DSN entry with the specified values. If the DSN exists, the values are updated.
         /// </summary>
@@ -346,12 +363,12 @@ namespace PG2GX
             // Create new key in odbc.ini with dsn name and add values
             RegistryKey dsnKey = Registry.LocalMachine.CreateSubKey(ODBC_INI_REG_PATH + dsnName);
             if (dsnKey == null) throw new Exception("ODBC Registry key for DSN was not created");
-            dsnKey.SetValue("Database", database);            
+            dsnKey.SetValue("Database", database);
             dsnKey.SetValue("Driver", driverPath);
             dsnKey.SetValue("LastUser", Environment.UserName);
             dsnKey.SetValue("Servername", server);
             dsnKey.SetValue("Port", port);
-            
+
             dsnKey.SetValue("Database", database);
             dsnKey.SetValue("Trusted_Connection", trustedConnection ? "Yes" : "No");
 
@@ -376,7 +393,7 @@ namespace PG2GX
         {
             RegistryKey datasourcesKey = GetDatasourcesKey();
             string[] returnValues = datasourcesKey.GetValueNames();
-            Array.Sort(returnValues);             
+            Array.Sort(returnValues);
             return returnValues;
         }
 
@@ -433,8 +450,6 @@ namespace PG2GX
             return ret.ToArray();
         }
     }
-
-
 }
 
 namespace Win32
@@ -448,6 +463,7 @@ namespace Win32
         // constants
         public const uint ERROR_SUCCESS = 0;
         public const uint ERROR_MORE_DATA = 234;
+
         public enum SV_101_TYPES : uint
         {
             SV_TYPE_WORKSTATION = 0x00000001,
@@ -502,6 +518,7 @@ namespace Win32
             [MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPWStr)]
             public string sv101_comment;
         };
+
         public enum PLATFORM_ID
         {
             PLATFORM_ID_DOS = 300,
@@ -543,7 +560,7 @@ namespace Win32
         {
             int entriesread = 0, totalentries = 0;
             List<SERVER_INFO_101> alServers = new List<SERVER_INFO_101>();
-            
+
             do
             {
                 // Buffer to store the available servers
@@ -578,7 +595,6 @@ namespace Win32
 
                 // free the buffer
                 NetApiBufferFree(buf);
-
             }
             while
                 (
@@ -588,9 +604,7 @@ namespace Win32
 
             try
             {
-                
                 alServers = alServers.OrderBy(item => item.sv101_comment).ToList<SERVER_INFO_101>();
-                
             }
             catch (Exception ex)
             {
@@ -601,4 +615,3 @@ namespace Win32
         }
     }
 }
-
