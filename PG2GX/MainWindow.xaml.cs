@@ -84,14 +84,21 @@ namespace PG2GX
                     MessageBoxResult res = MessageBox.Show("Registry Eintrag " + dbName + " exisitiert schon! Fortfahren?", "Warnung", MessageBoxButton.YesNo);
                     if (res == MessageBoxResult.No) return;
                 }
+
                 // create odbc connection
-                ODBCManager.CreateDSN(entryName, dbServerName, "PostgreSQL ANSI", true, dbName, dbServerPort, (hisProductName == HISMBSGX));
+                NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort, false);
+                // if a namespace 'mbs' exists, then we have a hisrm database and need to set the search path
+                NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM pg_catalog.pg_namespace WHERE nspname = 'mbs'", con);
+                NpgsqlDataReader reader = command.ExecuteReader();
+                reader.Read();
+                bool setSearchPath = (int.Parse(reader[0].ToString()) > 0);
+                ODBCManager.CreateDSN(entryName, dbServerName, "PostgreSQL ANSI", true, dbName, dbServerPort, setSearchPath);
+                reader.Close();
                 // create registry entries
                 RegistryManager.CreateEntry(hisProductName, entryName, dbServerName);
 
                 // add lang to db, if necessary
-                NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort, false);
-                NpgsqlCommand command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
+                command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
                                                             RETURNS VOID
                                                             LANGUAGE SQL
                                                             AS $$
