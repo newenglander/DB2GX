@@ -127,7 +127,7 @@ namespace PG2GX
             databaseServers.Items.Add(new MyComboBoxItem("castor", "5432"));
             databaseServers.Items.Add(new MyComboBoxItem("castor", "5431"));
             databaseServers.Items.Add(new MyComboBoxItem("vmpostgres90", "5432"));
-            databaseServers.Items.Add(new MyComboBoxItem("his2843", "5432"));
+            //databaseServers.Items.Add(new MyComboBoxItem("his2843", "5432"));
 
             //ArrayList serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
             List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
@@ -295,9 +295,12 @@ namespace PG2GX
         {
             var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + entryName);
             if (dbKey == null) throw new Exception("Registry key for DB was not created");
-            dbKey.SetValue("Name", entryName);
             dbKey.SetValue("DB-Server", databaseServer);
+            dbKey.SetValue("Name", entryName);
+            dbKey.SetValue("ODBCAutoCommit", 0, RegistryValueKind.DWord);
+            dbKey.SetValue("Pruefmodus", 0, RegistryValueKind.DWord);
             dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
+            dbKey.SetValue("Zugriff", 1, RegistryValueKind.DWord);
         }
 
         public static string[] GetAllEntries()
