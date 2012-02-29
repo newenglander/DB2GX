@@ -23,8 +23,11 @@ namespace PG2GX
         ArrayList localhostDBs;
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
+        ArrayList userDBs;
+
         public const String HISMBSGX = "HISMBS-GX";
         public const String HISFSVGX = "HISFSV-GX";
+        public const String PGPORT = "5432";
 
         public enum SQL_RETURN_CODE : int
         {
@@ -54,6 +57,7 @@ namespace PG2GX
             localhostDBs = new ArrayList();
             castorDBs = new ArrayList();
             vmpostgres90DBs = new ArrayList();
+            userDBs = new ArrayList();
 
             databaseServers.Focus();
         }
@@ -69,8 +73,8 @@ namespace PG2GX
             try
             {
                 String dbName = databases.SelectedValue.ToString();
-                String dbServerName = ((MyComboBoxItem)(databaseServers.SelectedItem)).Name;
-                String dbServerPort = ((MyComboBoxItem)(databaseServers.SelectedItem)).Value;
+                String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
+                String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
                 String hisProductName = hisProduct.SelectedValue.ToString();
                 String entryName = dbServerName + "-" + dbName;
                 if (ODBCManager.DSNExists(entryName))
@@ -130,13 +134,53 @@ namespace PG2GX
 
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
         {
-            databaseServers.Items.Add(new MyComboBoxItem("localhost", "5432"));
-            databaseServers.Items.Add(new MyComboBoxItem("castor", "5432"));
-            databaseServers.Items.Add(new MyComboBoxItem("castor", "5431"));
-            databaseServers.Items.Add(new MyComboBoxItem("vmpostgres90", "5432"));
-            //databaseServers.Items.Add(new MyComboBoxItem("his2843", "5432"));
+            databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
+            databaseServers.Items.Add(new ComboBoxServer("castor", PGPORT));
+            databaseServers.Items.Add(new ComboBoxServer("castor", "5431"));
+            databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
 
-            //ArrayList serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
+            BackgroundWorker bw = new BackgroundWorker();
+            bw.DoWork += new DoWorkEventHandler(findUserDBs);
+            bw.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker1_RunWorkerCompleted);
+            bw.RunWorkerAsync();
+        }
+
+        // This event handler deals with the results of the
+        // background operation.
+        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            // First, handle the case where an exception was thrown.
+            if (e.Error != null)
+            {
+                MessageBox.Show(e.Error.Message);
+            }
+            else if (e.Cancelled)
+            {
+                // Next, handle the case where the user canceled
+                // the operation.
+                // Note that due to a race condition in
+                // the DoWork event handler, the Cancelled
+                // flag may not have been set, even though
+                // CancelAsync was called.
+                TextBlockStatus.Text = "Canceled";
+            }
+            else
+            {
+                // Finally, handle the case where the operation
+                // succeeded.
+                //                TextBlockStatus.Text = e.Result.ToString();
+            }
+
+            // do remaining work.
+            foreach (ComboBoxServer server in userDBs)
+            {
+                databaseServers.Items.Add(server);
+            }
+        }
+
+        private void findUserDBs(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker worker = sender as BackgroundWorker;
             List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
 
             foreach (Win32.NetApi32.SERVER_INFO_101 server in serverList)
@@ -145,12 +189,11 @@ namespace PG2GX
                 if (nameToShow.Contains("UB1"))
                 {
                     // this test takes too long
-                    //if (openDBConnection(server.sv101_name, true) != null)
+                    if (openDBConnection(server.sv101_name, "postgres", PGPORT, true) != null)
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
-                        // commented out, needs to be fixed
-                        //databaseServers.Items.Add(new MyComboBoxItem(nameToShow, server.sv101_name));
+                        userDBs.Add(new ComboBoxServer(server.sv101_name, PGPORT, nameToShow));
                     }
                 }
             }
@@ -179,10 +222,10 @@ namespace PG2GX
 
         private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            String currentDBServer = ((MyComboBoxItem)databaseServers.SelectedItem).Name;
+            String currentDBServer = ((ComboBoxServer)databaseServers.SelectedItem).ServerName;
             TextBlockStatus.Text = "Verfügbare Datenbanken werden in " + currentDBServer + " gesucht.";
 
-            NpgsqlConnection sqlConx = openDBConnection(currentDBServer, "postgres", ((MyComboBoxItem)databaseServers.SelectedItem).Value, false);
+            NpgsqlConnection sqlConx = openDBConnection(currentDBServer, "postgres", ((ComboBoxServer)databaseServers.SelectedItem).Port, false);
 
             if (sqlConx == null) return;
 
@@ -199,7 +242,7 @@ namespace PG2GX
                 try
                 {
                     String dbName = row["database_name"].ToString();
-                    if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1"))
+                    if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
                     {
                         sortedDBs.Add(dbName);
                     }
@@ -269,22 +312,33 @@ namespace PG2GX
         }
     }
 
-    public class MyComboBoxItem
+    public class ComboBoxServer
     {
         public string Name { get; set; }
 
-        public string Value { get; set; }
+        public string ServerName { get; set; }
 
-        public MyComboBoxItem(string name, string value)
+        public string Port { get; set; }
+
+        public ComboBoxServer(string servername, string port, string displayname)
         {
-            Name = name;
-            Value = value;
+            ServerName = servername;
+            Port = port;
+            Name = displayname;
         }
 
-        public MyComboBoxItem(string name)
+        public ComboBoxServer(string servername, string port)
         {
-            Name = name;
-            Value = name;
+            ServerName = servername;
+            Port = port;
+            Name = servername;
+        }
+
+        public ComboBoxServer(string servername)
+        {
+            ServerName = servername;
+            Port = MainWindow.PGPORT;
+            Name = servername;
         }
     }
 
