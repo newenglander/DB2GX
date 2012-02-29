@@ -7,6 +7,7 @@ using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Web;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,7 +24,8 @@ namespace PG2GX
         ArrayList localhostDBs;
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
-        ArrayList userDBs;
+        ArrayList userDBs; // not String, but special ComboBox!
+        BackgroundWorker bw;
 
         public const String HISMBSGX = "HISMBS-GX";
         public const String HISFSVGX = "HISFSV-GX";
@@ -124,6 +126,8 @@ namespace PG2GX
                 int returnCode = command.ExecuteNonQuery();
 
                 TextBlockStatus.Text = "Datenbank " + dbName + "erfolg eingerichtet; Verfügbar über Eintrag " + entryName;
+                // reload list for immediate deletion of new database
+                comboBox1_Loaded(null, null);
             }
             catch (Exception ex)
             {
@@ -138,11 +142,6 @@ namespace PG2GX
             databaseServers.Items.Add(new ComboBoxServer("castor", PGPORT));
             databaseServers.Items.Add(new ComboBoxServer("castor", "5431"));
             databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
-
-            BackgroundWorker bw = new BackgroundWorker();
-            bw.DoWork += new DoWorkEventHandler(findUserDBs);
-            bw.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker1_RunWorkerCompleted);
-            bw.RunWorkerAsync();
         }
 
         // This event handler deals with the results of the
@@ -181,10 +180,13 @@ namespace PG2GX
         private void findUserDBs(object sender, DoWorkEventArgs e)
         {
             BackgroundWorker worker = sender as BackgroundWorker;
+            Thread.CurrentThread.Priority = ThreadPriority.Lowest;
             List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
 
             foreach (Win32.NetApi32.SERVER_INFO_101 server in serverList)
             {
+                if (worker.CancellationPending) break;
+
                 String nameToShow = server.sv101_comment;
                 if (nameToShow.Contains("UB1"))
                 {
@@ -308,7 +310,29 @@ namespace PG2GX
 
         private void comboBox1_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            textBox1.Text = "Treiber: " + ODBCManager.GetValue(comboBox1.SelectedValue.ToString(), "Driver");
+            if (comboBox1.SelectedValue != null)
+            {
+                textBox1.Text = "Treiber: " + ODBCManager.GetValue(comboBox1.SelectedValue.ToString(), "Driver");
+            }
+            else
+            {
+                textBox1.Clear();
+            }
+        }
+
+        private void checkBox1_Checked(object sender, RoutedEventArgs e)
+        {
+            bw = new BackgroundWorker();
+            bw.DoWork += new DoWorkEventHandler(findUserDBs);
+            bw.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker1_RunWorkerCompleted);
+            bw.WorkerSupportsCancellation = true;
+            bw.RunWorkerAsync();
+        }
+
+        private void checkBox1_Unchecked(object sender, RoutedEventArgs e)
+        {
+            // kill background worker
+            bw.CancelAsync();
         }
     }
 
