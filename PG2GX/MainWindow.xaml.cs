@@ -125,7 +125,7 @@ namespace PG2GX
                                                             DROP FUNCTION make_plpgsql();", con);
                 int returnCode = command.ExecuteNonQuery();
 
-                TextBlockStatus.Text = "Datenbank " + dbName + "erfolg eingerichtet; Verfügbar über Eintrag " + entryName;
+                TextBlockStatus.Text = "Datenbank " + dbName + " erfolgreich eingerichtet; Verfügbar über Eintrag " + entryName + ".";
                 // reload list for immediate deletion of new database
                 comboBox1_Loaded(null, null);
             }
