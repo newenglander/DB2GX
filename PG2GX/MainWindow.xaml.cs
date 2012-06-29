@@ -79,6 +79,10 @@ namespace PG2GX
                 String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
                 String hisProductName = hisProduct.SelectedValue.ToString();
                 String entryName = dbServerName + "-" + dbName;
+                if (entryName.Length > 30)
+                {
+                    entryName = dbServerName.Substring(0, 3) + "-" + dbName;
+                }
                 if (ODBCManager.DSNExists(entryName))
                 {
                     MessageBoxResult res = MessageBox.Show("ODBC Eintrag " + entryName + " exisitiert schon! Fortfahren?", "Warnung", MessageBoxButton.YesNo);
