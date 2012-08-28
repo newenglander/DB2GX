@@ -142,9 +142,7 @@ namespace PG2GX
 
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
         {
-            databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
-            databaseServers.Items.Add(new ComboBoxServer("castor", PGPORT));
-            databaseServers.Items.Add(new ComboBoxServer("castor", "5431"));
+            databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));                        
             databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
         }
 
