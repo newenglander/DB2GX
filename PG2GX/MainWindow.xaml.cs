@@ -13,6 +13,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using Npgsql;
+using IBM.Data.Informix;
 
 namespace PG2GX
 {
