@@ -16,10 +16,10 @@
         </StatusBar>
         <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,40,0,0" Name="databaseServers" VerticalAlignment="Top" Width="149" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding Path=MyComboBoxItem}" DisplayMemberPath="Name" SelectedValuePath="Value" SelectedValue="{Binding Path=MyComboBoxItem.Name}" />
         <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,106,0,0" Name="databases" VerticalAlignment="Top" Width="149" />
-        <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,164,0,0" Name="hisProduct" VerticalAlignment="Top" Width="149" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" />
+        <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,149,0,0" Name="hisProduct" VerticalAlignment="Top" Width="149" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" />
         <Label Content="Server" Height="28" HorizontalAlignment="Left" Margin="33,46,0,0" Name="label1" VerticalAlignment="Top" Width="80" />
         <Label Content="Datenbank" Height="28" HorizontalAlignment="Left" Margin="33,112,0,0" Name="label2" VerticalAlignment="Top" Width="80" />
-        <Label Content="GX Produkt" Height="28" HorizontalAlignment="Left" Margin="33,170,0,0" Name="label3" VerticalAlignment="Top" Width="80" />
+        <Label Content="GX Produkt" Height="28" HorizontalAlignment="Left" Margin="33,155,0,0" Name="label3" VerticalAlignment="Top" Width="80" />
         <GroupBox Grid.Column="1" Header="Löschen" Height="268" HorizontalAlignment="Left" Margin="63,14,0,0" Name="groupBox2" VerticalAlignment="Top" Width="320">
             <Grid>
                 <Button Content="Löschen" Height="58" Margin="53,0,27,57" Name="button2" VerticalAlignment="Bottom" Width="228" Click="button2_Click" />
@@ -28,5 +28,7 @@
             </Grid>
         </GroupBox>
         <CheckBox Content="Benutzerdatenbanken Laden (Hintergrund)" Height="16" HorizontalAlignment="Left" Margin="41,84,0,0" Name="checkBox1" VerticalAlignment="Top" Checked="checkBox1_Checked" Unchecked="checkBox1_Unchecked" />
+        <ComboBox Height="34" HorizontalAlignment="Left" ItemsSource="{Binding}" Margin="121,189,0,0" Name="comboBoxEncoding" VerticalAlignment="Top" Width="149" Loaded="comboBoxEncoding_Loaded" />
+        <Label Content="Encoding" Height="28" HorizontalAlignment="Left" Margin="33,195,0,0" Name="label4" VerticalAlignment="Top" Width="80" />
     </Grid>
 </Window>

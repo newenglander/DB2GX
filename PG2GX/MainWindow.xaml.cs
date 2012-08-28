@@ -31,6 +31,9 @@ namespace PG2GX
         public const String HISFSVGX = "HISFSV-GX";
         public const String PGPORT = "5432";
 
+        public const String PGANSI = "PostgreSQL ANSI";
+        public const String PGUNICODE = "PostgreSQL Unicode";
+
         public enum SQL_RETURN_CODE : int
         {
             SQL_ERROR = -1,
@@ -66,9 +69,9 @@ namespace PG2GX
 
         private void createNewEntry()
         {
-            if ((this.databaseServers.SelectedIndex == -1) || (this.databases.SelectedIndex == -1) || (this.hisProduct.SelectedIndex == -1))
+            if ((this.databaseServers.SelectedIndex == -1) || (this.databases.SelectedIndex == -1) || (this.hisProduct.SelectedIndex == -1) || (this.comboBoxEncoding.SelectedIndex == -1))
             {
-                MessageBox.Show("nichts ausgewählt!");
+                MessageBox.Show("Fehlende Eingabe!");
                 return;
             }
 
@@ -102,7 +105,7 @@ namespace PG2GX
                 NpgsqlDataReader reader = command.ExecuteReader();
                 reader.Read();
                 bool setSearchPath = (int.Parse(reader[0].ToString()) > 0);
-                ODBCManager.CreateDSN(entryName, dbServerName, "PostgreSQL ANSI", true, dbName, dbServerPort, setSearchPath);
+                ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(), true, dbName, dbServerPort, setSearchPath);
                 reader.Close();
                 // create registry entries
                 RegistryManager.CreateEntry(hisProductName, entryName, dbServerName);
@@ -142,8 +145,9 @@ namespace PG2GX
 
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
         {
-            databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));                        
+            databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
             databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
+            //databaseServers.Items.Add(new ComboBoxServer("his2843", PGPORT));
         }
 
         // This event handler deals with the results of the
@@ -299,7 +303,7 @@ namespace PG2GX
         {
             if (comboBox1.SelectedItem == null)
             {
-                MessageBox.Show("nichts ausgewählt!");
+                MessageBox.Show("Fehlende Eingabe!");
                 return;
             }
             String rememberItem = comboBox1.SelectedValue.ToString();
@@ -335,6 +339,12 @@ namespace PG2GX
         {
             // kill background worker
             bw.CancelAsync();
+        }
+
+        private void comboBoxEncoding_Loaded(object sender, RoutedEventArgs e)
+        {
+            comboBoxEncoding.Items.Add(PGANSI);
+            comboBoxEncoding.Items.Add(PGUNICODE);
         }
     }
 
