@@ -35,6 +35,9 @@ namespace PG2GX
         public const String PGANSI = "PostgreSQL ANSI";
         public const String PGUNICODE = "PostgreSQL Unicode";
 
+        public const String DBPOSTGRES = "PostgreSQL";
+        public const String DBINFORMIX = "Informix";
+
         public enum SQL_RETURN_CODE : int
         {
             SQL_ERROR = -1,
@@ -70,7 +73,8 @@ namespace PG2GX
 
         private void createNewEntry()
         {
-            if ((this.databaseServers.SelectedIndex == -1) || (this.databases.SelectedIndex == -1) || (this.hisProduct.SelectedIndex == -1) || (this.comboBoxEncoding.SelectedIndex == -1))
+            if ((comboBoxDBType.SelectedIndex == -1) || (databaseServers.SelectedIndex == -1) || (databases.SelectedIndex == -1) || (hisProduct.SelectedIndex == -1) || 
+                ((comboBoxEncoding.SelectedIndex == -1) && (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)))
             {
                 MessageBox.Show("Fehlende Eingabe!");
                 return;
@@ -78,11 +82,13 @@ namespace PG2GX
 
             try
             {
+                bool setSearchPath = false;
                 String dbName = databases.SelectedValue.ToString();
                 String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
                 String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
                 String hisProductName = hisProduct.SelectedValue.ToString();
                 String entryName = dbServerName + "-" + dbName;
+
                 if (entryName.Length > 30)
                 {
                     entryName = dbServerName.Substring(0, 3) + "-" + dbName;
@@ -99,20 +105,21 @@ namespace PG2GX
                     if (res == MessageBoxResult.No) return;
                 }
 
-                // create odbc connection
-                NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort, false);
-                // if a namespace 'mbs' exists, then we have a hisrm database and need to set the search path
-                NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM pg_catalog.pg_namespace WHERE nspname = 'mbs'", con);
-                NpgsqlDataReader reader = command.ExecuteReader();
-                reader.Read();
-                bool setSearchPath = (int.Parse(reader[0].ToString()) > 0);
-                ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(), true, dbName, dbServerPort, setSearchPath);
-                reader.Close();
-                // create registry entries
-                RegistryManager.CreateEntry(hisProductName, entryName, dbServerName);
+                if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
+                {
 
-                // add lang to db, if necessary
-                command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
+                    // create odbc connection
+                    NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort, false);
+                    // if a namespace 'mbs' exists, then we have a hisrm database and need to set the search path
+                    NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM pg_catalog.pg_namespace WHERE nspname = 'mbs'", con);
+                    NpgsqlDataReader reader = command.ExecuteReader();
+                    reader.Read();
+                    setSearchPath = (int.Parse(reader[0].ToString()) > 0);
+                    reader.Close();
+                    ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(), true, dbName, dbServerPort, setSearchPath);                                        
+
+                    // add lang to db, if necessary
+                    command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
                                                             RETURNS VOID
                                                             LANGUAGE SQL
                                                             AS $$
@@ -131,7 +138,15 @@ namespace PG2GX
                                                                 THEN NULL
                                                                 ELSE make_plpgsql() END;
                                                             DROP FUNCTION make_plpgsql();", con);
-                int returnCode = command.ExecuteNonQuery();
+                    int returnCode = command.ExecuteNonQuery();
+                    
+                }
+                else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
+                {
+                }
+
+                // create registry entries
+                RegistryManager.CreateEntry(hisProductName, entryName, dbServerName);
 
                 TextBlockStatus.Text = "Datenbank " + dbName + " erfolgreich eingerichtet; Verfügbar über Eintrag " + entryName + ".";
                 // reload list for immediate deletion of new database
@@ -146,9 +161,29 @@ namespace PG2GX
 
         private void databaseServers_Loaded(object sender, RoutedEventArgs e)
         {
-            databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
-            databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
-            //databaseServers.Items.Add(new ComboBoxServer("his2843", PGPORT));
+            databaseServers.Items.Clear();
+            if (comboBoxDBType.SelectedItem == null)
+                return;            
+            else if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
+            {                
+                databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
+                databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
+                //databaseServers.Items.Add(new ComboBoxServer("his2843", PGPORT));
+
+                checkBoxLoadUserDBs.IsEnabled = true;
+                comboBoxEncoding.IsEnabled = true;
+            }
+            else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
+            {
+                //databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
+                databaseServers.Items.Add(new ComboBoxServer("his2843", "1526", "", "ol_his2843"));
+                databaseServers.Items.Add(new ComboBoxServer("hermes", "1529", "", "hermes_onl9_net"));
+                databaseServers.Items.Add(new ComboBoxServer("apollo", "1529", "", "apollo_onl9_net"));
+
+                checkBoxLoadUserDBs.IsChecked = false;
+                checkBoxLoadUserDBs.IsEnabled = false;
+                comboBoxEncoding.IsEnabled = false;
+            }
         }
 
         // This event handler deals with the results of the
@@ -231,36 +266,83 @@ namespace PG2GX
 
         private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
-            String currentDBServer = ((ComboBoxServer)databaseServers.SelectedItem).ServerName;
-            TextBlockStatus.Text = "Verfügbare Datenbanken werden in " + currentDBServer + " gesucht.";
-
-            NpgsqlConnection sqlConx = openDBConnection(currentDBServer, "postgres", ((ComboBoxServer)databaseServers.SelectedItem).Port, false);
-
-            if (sqlConx == null) return;
-
-            DataTable tblDatabases = sqlConx.GetSchema("Databases");
-
-            sqlConx.Close();
-
-            this.databases.Items.Clear();
+            if (databaseServers.SelectedItem == null)
+                return;
 
             ArrayList sortedDBs = new ArrayList();
 
-            foreach (DataRow row in tblDatabases.Rows)
+            String currentDBServer = ((ComboBoxServer)databaseServers.SelectedItem).ServerName;
+            String currentDBServerPort = ((ComboBoxServer)databaseServers.SelectedItem).Port;
+
+            TextBlockStatus.Text = "Verfügbare Datenbanken werden in " + currentDBServer + " gesucht.";
+
+            if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
             {
-                try
+                NpgsqlConnection sqlConx = openDBConnection(currentDBServer, "postgres", currentDBServerPort, false);
+
+                if (sqlConx == null) return;
+
+                DataTable tblDatabases = sqlConx.GetSchema("Databases");
+
+                sqlConx.Close();
+
+                this.databases.Items.Clear();                
+
+                foreach (DataRow row in tblDatabases.Rows)
                 {
-                    String dbName = row["database_name"].ToString();
-                    if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
+                    try
                     {
-                        sortedDBs.Add(dbName);
+                        String dbName = row["database_name"].ToString();
+                        if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
+                        {
+                            sortedDBs.Add(dbName);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error: " + ex.Message);
+                        return;
                     }
                 }
-                catch (Exception ex)
+            }
+            else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
+            {
+
+                String currentInformixServer = ((ComboBoxServer)databaseServers.SelectedItem).InformixServer;
+
+                IfxConnection conn = new IfxConnection(
+                                "Database=sysmaster;User Id=fsv;Password=fsv.fsv;" +
+                                "Host=" + currentDBServer + ";Server=" + currentInformixServer + ";" +
+                                "Service=" + currentDBServerPort + ";Protocol=onsoctcp;"
+                                );
+                
+                try
                 {
-                    MessageBox.Show("Error: " + ex.Message);
-                    return;
+
+                    conn.Open();
+                    IfxCommand comm = conn.CreateCommand();
+                    comm.CommandText = "select * from sysdatabases ;";
+
+                    IfxDataReader ifxDataReaders = comm.ExecuteReader();
+
+                    while (ifxDataReaders.Read())
+                    {
+                        String dbName = ifxDataReaders[0].ToString();
+                        if (!dbName.StartsWith("sys"))
+                        {
+                            sortedDBs.Add(dbName);
+                        }
+                    }
+
+                    conn.Close();
+
                 }
+                catch (IfxException ex)
+                {
+                    MessageBox.Show("Failed opening connection: " + ex);
+
+                }
+
             }
 
             sortedDBs.Sort();
@@ -329,6 +411,10 @@ namespace PG2GX
 
         private void checkBox1_Checked(object sender, RoutedEventArgs e)
         {
+            // don't do anything for informix
+            if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
+                return;
+
             bw = new BackgroundWorker();
             bw.DoWork += new DoWorkEventHandler(findUserDBs);
             bw.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker1_RunWorkerCompleted);
@@ -347,6 +433,17 @@ namespace PG2GX
             comboBoxEncoding.Items.Add(PGANSI);
             comboBoxEncoding.Items.Add(PGUNICODE);
         }
+
+        private void comboBoxDBType_Loaded(object sender, RoutedEventArgs e)
+        {
+            comboBoxDBType.Items.Add(DBPOSTGRES);
+            comboBoxDBType.Items.Add(DBINFORMIX);
+        }
+
+        private void comboBoxDBType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            databaseServers_Loaded(sender, e);
+        }
     }
 
     public class ComboBoxServer
@@ -356,6 +453,19 @@ namespace PG2GX
         public string ServerName { get; set; }
 
         public string Port { get; set; }
+
+        public string InformixServer { get; set; }
+
+        public ComboBoxServer(string servername, string port, string displayname, string informixServer)
+        {
+            ServerName = servername;
+            Port = port;
+            if (displayname != "")
+                Name = displayname;
+            else
+                Name = servername;
+            InformixServer = informixServer;
+        }
 
         public ComboBoxServer(string servername, string port, string displayname)
         {
