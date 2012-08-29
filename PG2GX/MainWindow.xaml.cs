@@ -355,6 +355,7 @@ namespace PG2GX
 
             sortedDBs.Sort();
 
+            this.databases.Items.Clear();
             foreach (String db in sortedDBs)
             {
                 this.databases.Items.Add(db);
