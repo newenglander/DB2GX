@@ -83,7 +83,7 @@ namespace PG2GX
             try
             {
                 bool setSearchPath = false;
-                String dbName = databases.SelectedValue.ToString();
+                String dbName = databases.SelectedValue.ToString().Trim();
                 String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
                 String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
                 String hisProductName = hisProduct.SelectedValue.ToString();
@@ -143,10 +143,18 @@ namespace PG2GX
                 }
                 else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
                 {
+                    String host = dbServerName;
+                    dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).InformixServer;
+
+                    if (!SQLHosts.EntryExists(dbServerName))
+                    {
+                        SQLHosts.CreateEntry(dbServerName, host, dbServerPort);
+                    }
+
                 }
 
                 // create registry entries
-                RegistryManager.CreateEntry(hisProductName, entryName, dbServerName);
+                RegistryManager.CreateEntry(hisProductName, entryName, dbServerName, dbName, comboBoxDBType.SelectedItem.ToString());
 
                 TextBlockStatus.Text = "Datenbank " + dbName + " erfolgreich eingerichtet; Verfügbar über Eintrag " + entryName + ".";
                 // reload list for immediate deletion of new database
@@ -489,6 +497,26 @@ namespace PG2GX
         }
     }
 
+    public static class SQLHosts
+    {
+        private const string PATH = "SOFTWARE\\Informix\\SqlHosts";
+
+        public static bool EntryExists(String databaseServer)
+        {
+            var dbKey = Registry.LocalMachine.OpenSubKey(PATH + "\\" + databaseServer);
+            return dbKey != null;
+        }
+
+        public static void CreateEntry(String InformixServer, String host, String port)
+        {
+            var dbKey = Registry.LocalMachine.CreateSubKey(PATH + "\\" + InformixServer);
+            if (dbKey == null) throw new Exception("Registry key for SQLHosts was not created");
+            dbKey.SetValue("HOST", host);
+            dbKey.SetValue("PROTOCOL", "onsoctcp");
+            dbKey.SetValue("SERVICE", port);
+        }
+    }
+
     public static class RegistryManager
     {
         private const string HIS_REG_PATH = "SOFTWARE\\HIS\\";
@@ -499,15 +527,18 @@ namespace PG2GX
             return dbKey != null;
         }
 
-        public static void CreateEntry(String productName, String entryName, String databaseServer)
+        public static void CreateEntry(String productName, String entryName, String databaseServer, String databaseName, String databaseType)
         {
             var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + entryName);
             if (dbKey == null) throw new Exception("Registry key for DB was not created");
             dbKey.SetValue("DB-Server", databaseServer);
-            dbKey.SetValue("Name", entryName);
+            dbKey.SetValue("Name", databaseName);
             dbKey.SetValue("ODBCAutoCommit", 0, RegistryValueKind.DWord);
             dbKey.SetValue("Pruefmodus", 0, RegistryValueKind.DWord);
-            dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
+            if (databaseType == PG2GX.MainWindow.DBPOSTGRES)
+                dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
+            else //DBINFORMIX
+                dbKey.SetValue("Typ", 1, RegistryValueKind.DWord);
             dbKey.SetValue("Zugriff", 1, RegistryValueKind.DWord);
         }
 
