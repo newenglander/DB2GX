@@ -15,7 +15,7 @@ using Microsoft.Win32;
 using Npgsql;
 using IBM.Data.Informix;
 
-namespace PG2GX
+namespace DB2GX
 {
     /// <summary>
     /// Interaktionslogik für MainWindow.xaml
@@ -536,7 +536,7 @@ namespace PG2GX
             dbKey.SetValue("Name", databaseName);
             dbKey.SetValue("ODBCAutoCommit", 0, RegistryValueKind.DWord);
             dbKey.SetValue("Pruefmodus", 0, RegistryValueKind.DWord);
-            if (databaseType == PG2GX.MainWindow.DBPOSTGRES)
+            if (databaseType == DB2GX.MainWindow.DBPOSTGRES)
                 dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
             else //DBINFORMIX
                 dbKey.SetValue("Typ", 1, RegistryValueKind.DWord);

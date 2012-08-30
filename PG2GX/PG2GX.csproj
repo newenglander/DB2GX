@@ -8,8 +8,8 @@
     <ProjectGuid>{F3C6AF97-F6C5-4BA0-ACFF-E25A4A69C900}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PG2GX</RootNamespace>
-    <AssemblyName>PG2GX</AssemblyName>
+    <RootNamespace>DB2GX</RootNamespace>
+    <AssemblyName>DB2GX</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>

@@ -5,7 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Windows;
 
-namespace PG2GX
+namespace DB2GX
 {
     /// <summary>
     /// Interaktionslogik für "App.xaml"
