@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PG2GX", "PG2GX\PG2GX.csproj", "{F3C6AF97-F6C5-4BA0-ACFF-E25A4A69C900}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DB2GX", "DB2GX\DB2GX.csproj", "{F3C6AF97-F6C5-4BA0-ACFF-E25A4A69C900}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
