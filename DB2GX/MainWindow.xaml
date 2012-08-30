@@ -1,0 +1,36 @@
+﻿<Window x:Class="DB2GX.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DB2GX" Height="414" Width="737">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="288*" />
+            <ColumnDefinition Width="427*" />
+        </Grid.ColumnDefinitions>
+        <GroupBox Header="Neu einrichten" Height="327" HorizontalAlignment="Left" Margin="9,19,0,0" Name="groupBox1" VerticalAlignment="Top" Width="317" IsEnabled="True" Grid.ColumnSpan="2">
+            <Button Content="Einrichten" Height="58" Name="button1" Width="228" VerticalAlignment="Bottom" Margin="0,0,0,10" Click="button1_Click" />
+        </GroupBox>
+        <StatusBar Height="23" HorizontalAlignment="Stretch" Name="statusBar1" VerticalAlignment="Bottom" ClipToBounds="False" Grid.ColumnSpan="2">
+            <TextBlock Name="TextBlockStatus" />
+
+        </StatusBar>
+        <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,81,0,0" Name="databaseServers" VerticalAlignment="Top" Width="149" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding Path=MyComboBoxItem}" DisplayMemberPath="Name" SelectedValuePath="Value" SelectedValue="{Binding Path=MyComboBoxItem.Name}" />
+        <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,145,0,0" Name="databases" VerticalAlignment="Top" Width="149" />
+        <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,183,0,0" Name="hisProduct" VerticalAlignment="Top" Width="149" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" />
+        <Label Content="Server" Height="28" HorizontalAlignment="Left" Margin="33,87,0,0" Name="label1" VerticalAlignment="Top" Width="80" />
+        <Label Content="Datenbank" Height="28" HorizontalAlignment="Left" Margin="33,151,0,0" Name="label2" VerticalAlignment="Top" Width="80" />
+        <Label Content="GX Produkt" Height="28" HorizontalAlignment="Left" Margin="33,189,0,0" Name="label3" VerticalAlignment="Top" Width="80" />
+        <GroupBox Grid.Column="1" Header="Löschen" Height="268" HorizontalAlignment="Left" Margin="63,14,0,0" Name="groupBox2" VerticalAlignment="Top" Width="320">
+            <Grid>
+                <Button Content="Löschen" Height="58" Margin="53,0,27,57" Name="button2" VerticalAlignment="Bottom" Width="228" Click="button2_Click" />
+                <ComboBox Height="34" HorizontalAlignment="Left" Margin="96,43,0,0" Name="comboBox1" VerticalAlignment="Top" Width="149" Loaded="comboBox1_Loaded" SelectionChanged="comboBox1_SelectionChanged" />
+                <TextBox Height="39" HorizontalAlignment="Left" Margin="44,87,0,0" Name="textBox1" VerticalAlignment="Top" Width="223" TextWrapping="Wrap" />
+            </Grid>
+        </GroupBox>
+        <CheckBox Content="Benutzerdatenbanken Laden (Hintergrund)" Height="16" HorizontalAlignment="Left" Margin="38,121,0,0" Name="checkBoxLoadUserDBs" VerticalAlignment="Top" Checked="checkBox1_Checked" Unchecked="checkBox1_Unchecked" />
+        <ComboBox Height="34" HorizontalAlignment="Left" ItemsSource="{Binding}" Margin="121,223,0,0" Name="comboBoxEncoding" VerticalAlignment="Top" Width="149" Loaded="comboBoxEncoding_Loaded" />
+        <Label Content="Encoding" Height="28" HorizontalAlignment="Left" Margin="33,229,0,0" Name="label4" VerticalAlignment="Top" Width="80" />
+        <ComboBox DataContext="{Binding}" DisplayMemberPath="" Height="34" HorizontalAlignment="Left" ItemsSource="{Binding Path=MyComboBoxItem}" Margin="121,38,0,0" Name="comboBoxDBType" SelectedValue="{Binding Path=MyComboBoxItem.Name}" SelectedValuePath="" VerticalAlignment="Top" Width="149" Loaded="comboBoxDBType_Loaded" SelectionChanged="comboBoxDBType_SelectionChanged" />
+        <Label Content="Typ" Height="28" HorizontalAlignment="Left" Margin="33,44,0,0" Name="label5" VerticalAlignment="Top" Width="80" />
+    </Grid>
+</Window>
