@@ -30,6 +30,7 @@ namespace DB2GX
 
         public const String HISMBSGX = "HISMBS-GX";
         public const String HISFSVGX = "HISFSV-GX";
+        public const String HISSVAGX = "HISSVA-GX";
         public const String PGPORT = "5432";
 
         public const String PGANSI = "PostgreSQL ANSI";
@@ -619,7 +620,9 @@ namespace DB2GX
             dsnKey.SetValue("MaxLongVarcharSize", "32766");
             dsnKey.SetValue("MaxVarcharSize", "32766");
             if (setConnSettings)
+            {
                 dsnKey.SetValue("ConnSettings", "SET+search%5fpath+TO+mbs");
+            }
             dsnKey.SetValue("Username", "fsv");
             dsnKey.SetValue("Password", "fsv.fsv");
             dsnKey.SetValue("Protocol", "7.4-2");
