@@ -83,7 +83,7 @@ namespace DB2GX
 
             try
             {
-                bool setSearchPath = false;
+                String setSearchPathTo = "";
                 String dbName = databases.SelectedValue.ToString().Trim();
                 String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
                 String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
@@ -115,9 +115,17 @@ namespace DB2GX
                     NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM pg_catalog.pg_namespace WHERE nspname = 'mbs'", con);
                     NpgsqlDataReader reader = command.ExecuteReader();
                     reader.Read();
-                    setSearchPath = (int.Parse(reader[0].ToString()) > 0);
+                    if (int.Parse(reader[0].ToString()) > 0)
+                    {
+                        if ((hisProduct.SelectedItem.ToString() == HISMBSGX) || (hisProduct.SelectedItem.ToString() == HISFSVGX))
+                            setSearchPathTo = "mbs";
+                        else if (hisProduct.SelectedItem.ToString() == HISSVAGX)
+                            setSearchPathTo = "sva4";
+                    }
                     reader.Close();
-                    ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(), true, dbName, dbServerPort, setSearchPath);                                        
+                    string user = "";
+                    createUserAndPasswordString(ref user);
+                    ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(), true, dbName, dbServerPort, user, setSearchPathTo);                                        
 
                     // add lang to db, if necessary
                     command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
@@ -177,6 +185,7 @@ namespace DB2GX
             {                
                 databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
                 databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
+                databaseServers.Items.Add(new ComboBoxServer("vmpostgres91", PGPORT));
                 //databaseServers.Items.Add(new ComboBoxServer("his2843", PGPORT));
 
                 checkBoxLoadUserDBs.IsEnabled = true;
@@ -255,7 +264,8 @@ namespace DB2GX
         private NpgsqlConnection openDBConnection(String host, String db, String port, bool silent)
         {
             if (db == "") db = "postgres";
-            String conn = "Server=" + host + ";Port=" + port + ";Integrated Security=true;User Id=fsv;Password=fsv.fsv;Database=" + db + ";Timeout=1;CommandTimeout=1;";
+            String user = "";
+            String conn = "Server=" + host + ";Port=" + port + ";Integrated Security=true;" + createUserAndPasswordString(ref user) + "Database=" + db + ";Timeout=1;CommandTimeout=1;";
             NpgsqlConnection sqlConx = null;
             try
             {
@@ -318,9 +328,9 @@ namespace DB2GX
             {
 
                 String currentInformixServer = ((ComboBoxServer)databaseServers.SelectedItem).InformixServer;
-
+                String user = "";
                 IfxConnection conn = new IfxConnection(
-                                "Database=sysmaster;User Id=fsv;Password=fsv.fsv;" +
+                                "Database=sysmaster;" + createUserAndPasswordString(ref user) +
                                 "Host=" + currentDBServer + ";Server=" + currentInformixServer + ";" +
                                 "Service=" + currentDBServerPort + ";Protocol=onsoctcp;"
                                 );
@@ -364,10 +374,20 @@ namespace DB2GX
             TextBlockStatus.Text = "Server " + currentDBServer + " hat " + databases.Items.Count + " Datenbanken verfügbar.";
         }
 
+        private String createUserAndPasswordString(ref String user)
+        {
+            if ((string)hisProduct.SelectedItem == HISSVAGX)
+                user = "sva";
+            else // HISFSVGX, HISMBSGX or initial contact
+                user = "fsv";
+            return "User Id=" + user + ";Password=" + user + "." + user + ";";
+        }
+
         private void hisProduct_Loaded(object sender, RoutedEventArgs e)
         {
-            hisProduct.Items.Add(HISMBSGX);
             hisProduct.Items.Add(HISFSVGX);
+            hisProduct.Items.Add(HISMBSGX);
+            hisProduct.Items.Add(HISSVAGX);
         }
 
         private void button1_Click(object sender, RoutedEventArgs e)
@@ -556,11 +576,13 @@ namespace DB2GX
 
         public static void DeleteEntry(string entry)
         {
-            if (Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank\\" + entry) != null)
-                Registry.LocalMachine.DeleteSubKeyTree(HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank\\" + entry);
+            String fullEntry = HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank\\" + entry;
+            if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
+                Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
 
-            if (Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank\\" + entry) != null)
-                Registry.LocalMachine.DeleteSubKeyTree(HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank\\" + entry);
+            fullEntry = HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank\\" + entry;
+            if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
+                Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
         }
     }
 
@@ -592,8 +614,8 @@ namespace DB2GX
         /// <param name="trustedConnection">True to use NT authentication, false to require applications to supply username/password in the connection string</param>
         /// <param name="database">Name of the datbase to connect to</param>
         /// <param name="port">Port of server</param>
-        /// <param name="setConnSettings">TRUE: Set search_path TO mbs</param>
-        public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, string port, bool setConnSettings)
+        /// <param name="setConnSettings">Set search_path TO this value, if not empty</param>
+        public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, string port, string user, string setConnSettings)
         {
             // Lookup driver path from driver name
             RegistryKey driverKey = Registry.LocalMachine.OpenSubKey(ODBCINST_INI_REG_PATH + driverName);
@@ -619,9 +641,9 @@ namespace DB2GX
             // HIS Extras
             dsnKey.SetValue("MaxLongVarcharSize", "32766");
             dsnKey.SetValue("MaxVarcharSize", "32766");
-            if (setConnSettings)
+            if (setConnSettings != "")
             {
-                dsnKey.SetValue("ConnSettings", "SET+search%5fpath+TO+mbs");
+                dsnKey.SetValue("ConnSettings", "SET+search%5fpath+TO+" + setConnSettings);
             }
             dsnKey.SetValue("Username", "fsv");
             dsnKey.SetValue("Password", "fsv.fsv");
