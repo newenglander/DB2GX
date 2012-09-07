@@ -193,14 +193,14 @@ namespace DB2GX
             }
             else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
             {
-                //databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
-                databaseServers.Items.Add(new ComboBoxServer("his2843", "1526", "", "ol_his2843"));
+                //databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));                
                 databaseServers.Items.Add(new ComboBoxServer("hermes", "1529", "", "hermes_onl9_net"));
                 databaseServers.Items.Add(new ComboBoxServer("apollo", "1529", "", "apollo_onl9_net"));
-
+                databaseServers.Items.Add(new ComboBoxServer("his2843", "1526", "", "ol_his2843"));
                 checkBoxLoadUserDBs.IsChecked = false;
                 checkBoxLoadUserDBs.IsEnabled = false;
                 comboBoxEncoding.IsEnabled = false;
+                comboBoxEncoding.SelectedIndex = -1;
             }
         }
 
@@ -424,7 +424,7 @@ namespace DB2GX
             RegistryManager.DeleteEntry(rememberItem);
             // refresh list
             comboBox1_Loaded(null, null);
-            TextBlockStatus.Text = "Eintrag " + rememberItem + " gelöscht.";
+            TextBlockStatus.Text = "Alle Einträge von \"" + rememberItem + "\" aus der Registry und ODBC Quellen gelöscht.";
         }
 
         private void comboBox1_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -553,14 +553,19 @@ namespace DB2GX
         {
             var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + entryName);
             if (dbKey == null) throw new Exception("Registry key for DB was not created");
-            dbKey.SetValue("DB-Server", databaseServer);
-            dbKey.SetValue("Name", databaseName);
+            dbKey.SetValue("DB-Server", databaseServer);            
             dbKey.SetValue("ODBCAutoCommit", 0, RegistryValueKind.DWord);
             dbKey.SetValue("Pruefmodus", 0, RegistryValueKind.DWord);
             if (databaseType == DB2GX.MainWindow.DBPOSTGRES)
+            {
+                dbKey.SetValue("Name", entryName);
                 dbKey.SetValue("Typ", 6, RegistryValueKind.DWord);
+            }
             else //DBINFORMIX
+            {
+                dbKey.SetValue("Name", databaseName);
                 dbKey.SetValue("Typ", 1, RegistryValueKind.DWord);
+            }
             dbKey.SetValue("Zugriff", 1, RegistryValueKind.DWord);
         }
 
