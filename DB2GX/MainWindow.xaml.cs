@@ -122,7 +122,14 @@ namespace DB2GX
                     reader.Close();
                     string user = "";
                     createUserAndPasswordString(ref user);
-                    ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(), true, dbName, dbServerPort, user, setSearchPathTo);                                        
+                    bool retval = ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(),
+                                                        true, dbName, dbServerPort, user, setSearchPathTo);
+
+                    if (!retval)
+                    {
+                        TextBlockStatus.Text = "fail: ODBCManager.CreateDSN";
+                        return;
+                    }
 
                     // add lang to db, if necessary
                     command = new NpgsqlCommand(@"CREATE OR REPLACE FUNCTION make_plpgsql()
@@ -645,12 +652,21 @@ namespace DB2GX
         /// <param name="database">Name of the datbase to connect to</param>
         /// <param name="port">Port of server</param>
         /// <param name="setConnSettings">Set search_path TO this value, if not empty</param>
-        public static void CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, string port, string user, string setConnSettings)
+        public static bool CreateDSN(string dsnName, string server, string driverName, bool trustedConnection, string database, string port, string user, string setConnSettings)
         {
             // Lookup driver path from driver name
-            RegistryKey driverKey = Registry.LocalMachine.OpenSubKey(ODBCINST_INI_REG_PATH + driverName);
-            if (driverKey == null) throw new Exception(string.Format("ODBC Registry key for driver '{0}' does not exist", driverName));
-            string driverPath = driverKey.GetValue("Driver").ToString();
+            String driverPath = ODBCINST_INI_REG_PATH + driverName;
+            RegistryKey driverKey = Registry.LocalMachine.OpenSubKey(driverPath);
+            if (driverKey == null)
+            {
+                driverKey = Registry.LocalMachine.CreateSubKey(driverPath);
+            }
+            driverPath = (String)driverKey.GetValue("Driver");
+            if (driverPath == null)
+            {
+                MessageBox.Show("driverPath ist null!");
+                return false;
+            }
 
             // Add value to odbc data sources
             RegistryKey datasourcesKey = GetDatasourcesKey();
@@ -678,6 +694,8 @@ namespace DB2GX
             dsnKey.SetValue("Username", "fsv");
             dsnKey.SetValue("Password", "fsv.fsv");
             dsnKey.SetValue("Protocol", "7.4-2");
+
+            return true;
         }
 
         private static RegistryKey GetDatasourcesKey()
