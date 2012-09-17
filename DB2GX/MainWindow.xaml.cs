@@ -325,7 +325,7 @@ namespace DB2GX
 
                 if (!SQLHosts.EntryExists(currentInformixServer))
                 {
-                    SQLHosts.CreateEntry(currentDBServer, currentInformixServer, currentDBServerPort);
+                    SQLHosts.CreateEntry(currentInformixServer, currentDBServer, currentDBServerPort);
                 }
 
                 IfxConnection conn = new IfxConnection(
@@ -535,6 +535,7 @@ namespace DB2GX
             dbKey.SetValue("HOST", host);
             dbKey.SetValue("PROTOCOL", "onsoctcp");
             dbKey.SetValue("SERVICE", port);
+            dbKey.Flush();
         }
     }
 
