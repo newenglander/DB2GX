@@ -292,7 +292,11 @@ namespace DB2GX
             {
                 NpgsqlConnection sqlConx = openDBConnection(currentDBServer, "postgres", currentDBServerPort, false);
 
-                if (sqlConx == null) return;
+                if (sqlConx == null)
+                {
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
+                }
 
                 DataTable tblDatabases = sqlConx.GetSchema("Databases");
 
@@ -328,14 +332,13 @@ namespace DB2GX
                     SQLHosts.CreateEntry(currentInformixServer, currentDBServer, currentDBServerPort);
                 }
 
-                IfxConnection conn = new IfxConnection(
+                try
+                {
+                    IfxConnection conn = new IfxConnection(
                                 "Database=sysmaster;" + createUserAndPasswordString(ref user) +
                                 "Host=" + currentDBServer + ";Server=" + currentInformixServer + ";" +
                                 "Service=" + currentDBServerPort + ";Protocol=onsoctcp;"
                                 );
-                
-                try
-                {
 
                     conn.Open();
                     IfxCommand comm = conn.CreateCommand();
@@ -358,7 +361,14 @@ namespace DB2GX
                 catch (IfxException ex)
                 {
                     MessageBox.Show("Failed opening connection: " + ex);
-
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
+                }
+                catch (TypeInitializationException ex)
+                {
+                    MessageBox.Show("Failed opening connection: " + ex);
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
                 }
 
             }
@@ -573,11 +583,24 @@ namespace DB2GX
 
         public static string[] GetAllEntries()
         {
-            string[] returnValues = Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank").GetSubKeyNames();
-            string[] tempValues = Registry.LocalMachine.OpenSubKey(HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank").GetSubKeyNames();
+            String fsvPath = HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank",
+                   mbsPath = HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank";
+
+            RegistryKey fsvKey = Registry.LocalMachine.OpenSubKey(fsvPath),
+                        mbsKey = Registry.LocalMachine.OpenSubKey(mbsPath);
+
+            if (fsvKey == null)
+                Registry.LocalMachine.CreateSubKey(fsvPath);
+
+            if (mbsKey == null)
+                Registry.LocalMachine.CreateSubKey(mbsPath);
+
+            string[] returnValues = fsvKey.GetSubKeyNames();
+            string[] tempValues = mbsKey.GetSubKeyNames();
             int originalLength = returnValues.Length;
             Array.Resize<string>(ref returnValues, returnValues.Length + tempValues.Length);
-            Array.Copy(tempValues, 0, returnValues, originalLength, tempValues.Length - 1);
+            if (tempValues.Length != 0)
+                Array.Copy(tempValues, 0, returnValues, originalLength, tempValues.Length - 1);
             return returnValues;
         }
 
@@ -659,8 +682,12 @@ namespace DB2GX
 
         private static RegistryKey GetDatasourcesKey()
         {
-            RegistryKey datasourcesKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources", true);
-            if (datasourcesKey == null) MessageBox.Show("ODBC Registry key for datasources does not exist");
+            String datasourcesPath = ODBC_INI_REG_PATH + "ODBC Data Sources";
+            RegistryKey datasourcesKey = Registry.LocalMachine.OpenSubKey(datasourcesPath, true);
+            if (datasourcesKey == null)
+            {
+                datasourcesKey = Registry.LocalMachine.CreateSubKey(datasourcesPath);                
+            }
             return datasourcesKey;
         }
 
