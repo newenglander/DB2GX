@@ -401,6 +401,8 @@ namespace DB2GX
             // ODBC
             string[] values = ODBCManager.GetAllDSN();
 
+            if (values == null) return;
+
             // Registry
             values = values.Concat(RegistryManager.GetAllEntries()).Distinct().ToArray();
             Array.Sort(values);
@@ -658,13 +660,14 @@ namespace DB2GX
         private static RegistryKey GetDatasourcesKey()
         {
             RegistryKey datasourcesKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + "ODBC Data Sources", true);
-            if (datasourcesKey == null) throw new Exception("ODBC Registry key for datasources does not exist");
+            if (datasourcesKey == null) MessageBox.Show("ODBC Registry key for datasources does not exist");
             return datasourcesKey;
         }
 
         public static string[] GetAllDSN()
         {
             RegistryKey datasourcesKey = GetDatasourcesKey();
+            if (datasourcesKey == null) return null;
             string[] returnValues = datasourcesKey.GetValueNames();
             Array.Sort(returnValues);
             return returnValues;
