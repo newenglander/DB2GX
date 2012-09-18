@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -107,7 +108,7 @@ namespace DB2GX
                 {
 
                     // create odbc connection
-                    NpgsqlConnection con = openDBConnection(dbServerName, dbName, dbServerPort, false);
+                    NpgsqlConnection con = (NpgsqlConnection)DBConnection.openDBConnection(dbServerName, dbName, dbServerPort, (string)hisProduct.SelectedItem, false);
                     // if a namespace 'mbs' exists, then we have a hisrm database and need to set the search path
                     NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM pg_catalog.pg_namespace WHERE nspname = 'mbs'", con);
                     NpgsqlDataReader reader = command.ExecuteReader();
@@ -121,7 +122,7 @@ namespace DB2GX
                     }
                     reader.Close();
                     string user = "";
-                    createUserAndPasswordString(ref user);
+                    DBConnection.createUserAndPasswordString((string)hisProduct.SelectedItem, ref user);
                     bool retval = ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(),
                                                         true, dbName, dbServerPort, user, setSearchPathTo);
 
@@ -251,7 +252,7 @@ namespace DB2GX
                 if (nameToShow.Contains("UB1"))
                 {
                     // this test takes too long
-                    if (openDBConnection(server.sv101_name, "postgres", PGPORT, true) != null)
+                    if (DBConnection.openDBConnection(server.sv101_name, "postgres", PGPORT, (string)hisProduct.SelectedItem, true) != null)
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
@@ -259,29 +260,7 @@ namespace DB2GX
                     }
                 }
             }
-        }
-
-        private NpgsqlConnection openDBConnection(String host, String db, String port, bool silent)
-        {
-            if (db == "") db = "postgres";
-            String user = "";
-            String conn = "Server=" + host + ";Port=" + port + ";Integrated Security=true;" + createUserAndPasswordString(ref user) + "Database=" + db + ";Timeout=1;CommandTimeout=1;";
-            NpgsqlConnection sqlConx = null;
-            try
-            {
-                sqlConx = new NpgsqlConnection(conn);
-                sqlConx.Open();
-            }
-            catch (Exception ex)
-            {
-                if (!silent)
-                {
-                    MessageBox.Show("Error: " + ex.Message);
-                }
-                return null;
-            }
-            return sqlConx;
-        }
+        }        
 
         private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
@@ -297,7 +276,7 @@ namespace DB2GX
 
             if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
             {
-                NpgsqlConnection sqlConx = openDBConnection(currentDBServer, "postgres", currentDBServerPort, false);
+                NpgsqlConnection sqlConx = (NpgsqlConnection)DBConnection.openDBConnection(currentDBServer, "postgres", currentDBServerPort, (string)hisProduct.SelectedItem,  false);
 
                 if (sqlConx == null)
                 {
@@ -342,7 +321,7 @@ namespace DB2GX
                 try
                 {
                     IfxConnection conn = new IfxConnection(
-                                "Database=sysmaster;" + createUserAndPasswordString(ref user) +
+                                "Database=sysmaster;" + DBConnection.createUserAndPasswordString((string)hisProduct.SelectedItem, ref user) +
                                 "Host=" + currentDBServer + ";Server=" + currentInformixServer + ";" +
                                 "Service=" + currentDBServerPort + ";Protocol=onsoctcp;"
                                 );
@@ -388,22 +367,17 @@ namespace DB2GX
                 this.databases.Items.Add(db);
             }
             TextBlockStatus.Text = "Server " + currentDBServer + " hat " + databases.Items.Count + " Datenbanken verfügbar.";
-        }
-
-        private String createUserAndPasswordString(ref String user)
-        {
-            if ((string)hisProduct.SelectedItem == HISSVAGX)
-                user = "sva";
-            else // HISFSVGX, HISMBSGX or initial contact
-                user = "fsv";
-            return "User Id=" + user + ";Password=" + user + "." + user + ";";
-        }
+        }        
 
         private void hisProduct_Loaded(object sender, RoutedEventArgs e)
         {
+            /*
             hisProduct.Items.Add(HISFSVGX);
             hisProduct.Items.Add(HISMBSGX);
             hisProduct.Items.Add(HISSVAGX);
+             * */
+
+            hisProduct.Items.Add(HISFSVGX);
         }
 
         private void button1_Click(object sender, RoutedEventArgs e)
@@ -491,6 +465,56 @@ namespace DB2GX
         private void comboBoxDBType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             databaseServers_Loaded(sender, e);
+        }
+
+        private void databases_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            //DBConnection.getGXVersions(String host, String db, String port);
+        }
+    }
+
+    public static class DBConnection
+    {
+        enum DBType 
+        {
+            Informix,
+            Postgres
+        };
+
+        public static void getGXVersions(String host, String db, String port)
+        {
+        }
+
+        public static String createUserAndPasswordString(String product, ref String user)
+        {
+            
+            if (product == MainWindow.HISSVAGX)
+                user = "sva";
+            else // HISFSVGX, HISMBSGX or initial contact
+                user = "fsv";
+            return "User Id=" + user + ";Password=" + user + "." + user + ";";
+        }
+
+        public static DbConnection openDBConnection(String host, String db, String port, String product, bool silent)
+        {
+            if (db == "") db = "postgres";
+            String user = "";
+            String conn = "Server=" + host + ";Port=" + port + ";Integrated Security=true;" + createUserAndPasswordString(product, ref user) + "Database=" + db + ";Timeout=1;CommandTimeout=1;";
+            NpgsqlConnection sqlConx = null;
+            try
+            {
+                sqlConx = new NpgsqlConnection(conn);
+                sqlConx.Open();
+            }
+            catch (Exception ex)
+            {
+                if (!silent)
+                {
+                    MessageBox.Show("Error: " + ex.Message);
+                }
+                return null;
+            }
+            return sqlConx;
         }
     }
 
