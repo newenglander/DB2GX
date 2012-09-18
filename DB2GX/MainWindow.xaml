@@ -15,7 +15,7 @@
 
         </StatusBar>
         <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,81,0,0" Name="databaseServers" VerticalAlignment="Top" Width="149" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding}" DisplayMemberPath="Name" SelectedValuePath="Value" />
-        <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,145,0,0" Name="databases" VerticalAlignment="Top" Width="149" ItemsSource="{Binding}" />
+        <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,145,0,0" Name="databases" VerticalAlignment="Top" Width="149" ItemsSource="{Binding}" SelectionChanged="databases_SelectionChanged" />
         <ComboBox Height="34" HorizontalAlignment="Left" Margin="121,183,0,0" Name="hisProduct" VerticalAlignment="Top" Width="149" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" />
         <Label Content="Server" Height="28" HorizontalAlignment="Left" Margin="33,87,0,0" Name="label1" VerticalAlignment="Top" Width="80" />
         <Label Content="Datenbank" Height="28" HorizontalAlignment="Left" Margin="33,151,0,0" Name="label2" VerticalAlignment="Top" Width="80" />
