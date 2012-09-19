@@ -294,7 +294,8 @@ namespace DB2GX
                 {
                     // this test takes too long
                     DBConnection pgConnection = new DBConnection(DBConnection.DBType.Postgres);
-                    if (pgConnection.openPGConnection(server.sv101_name, "postgres", PGPORT, getHisProduct(), true) != null)
+
+                    if (pgConnection.openPGConnection(server.sv101_name, "postgres", PGPORT, "", true) != null)
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
@@ -471,7 +472,7 @@ namespace DB2GX
         private void checkBox1_Checked(object sender, RoutedEventArgs e)
         {
             // don't do anything for informix
-            if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
+            if ((String) comboBoxDBType.SelectedItem == DBINFORMIX)
                 return;
 
             bw = new BackgroundWorker();
