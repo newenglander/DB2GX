@@ -12,6 +12,8 @@ using System.Windows.Controls;
 using Microsoft.Win32;
 using Npgsql;
 using IBM.Data.Informix;
+using System.Security.Principal;
+
 
 namespace DB2GX
 {
@@ -56,7 +58,7 @@ namespace DB2GX
             ODBC_ADD_SYS_DSN = 4,
             ODBC_CONFIG_SYS_DSN = 5,
             ODBC_REMOVE_SYS_DSN = 6,
-            ODBC_REMOVE_DEFAULT_DSN = 7
+            ODBC_REMOVE_DEFAULT_DSN = 77
         }
 
         public MainWindow()
@@ -67,8 +69,45 @@ namespace DB2GX
             vmpostgres90DBs = new ArrayList();
             userDBs = new ArrayList();
 
+            if (!IsUserAdministrator())
+            {
+                MessageBox.Show("Kein Admin rechte!");
+                return;
+            }
+
             databaseServers.Focus();
         }
+
+        // http://stackoverflow.com/a/1089061/381233
+        public bool IsUserAdministrator()
+        {
+            //bool value to hold our return value
+            bool isAdmin;
+            try
+            {
+                //get the currently logged in user
+                WindowsIdentity user = WindowsIdentity.GetCurrent();
+                WindowsPrincipal principal = new WindowsPrincipal(user);
+                isAdmin = principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                isAdmin = false;
+            }
+            catch (Exception ex)
+            {
+                isAdmin = false;
+            }
+            return isAdmin;
+        }
+
+        private String getHisProduct()
+        {
+            String hisProductName = (String)hisProduct.SelectedValue;
+
+            return (hisProductName == null) ? hisProductName : hisProductName.Split(' ')[0];
+        }
+
 
         private void createNewEntry()
         {
@@ -85,7 +124,7 @@ namespace DB2GX
                 String dbName = databases.SelectedValue.ToString().Trim();
                 String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
                 String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
-                String hisProductName = hisProduct.SelectedValue.ToString();
+                String hisProductName = getHisProduct();
                 String entryName = dbServerName + "-" + dbName;
 
                 if (entryName.Length > 30)
@@ -109,9 +148,11 @@ namespace DB2GX
 
                     // create odbc connection
                     DBConnection pgConnection = new DBConnection(DBConnection.DBType.Postgres);
-                    NpgsqlConnection con = (NpgsqlConnection)pgConnection.openPGConnection(dbServerName, dbName, dbServerPort, (string)hisProduct.SelectedItem, false);
+                    NpgsqlConnection con = (NpgsqlConnection)pgConnection.openPGConnection(dbServerName, dbName, dbServerPort, getHisProduct(), false);
                     // if a namespace 'mbs' exists, then we have a hisrm database and need to set the search path
-                    NpgsqlCommand command = new NpgsqlCommand("SELECT COUNT(*) FROM pg_catalog.pg_namespace WHERE nspname = 'mbs'", con);
+                    String query = "SELECT COUNT(*) FROM pg_catalog.pg_namespace WHERE nspname IN ('mbs', 'sva4')";
+
+                    NpgsqlCommand command = new NpgsqlCommand(query, con);
                     NpgsqlDataReader reader = command.ExecuteReader();
                     reader.Read();
                     if (int.Parse(reader[0].ToString()) > 0)
@@ -123,7 +164,7 @@ namespace DB2GX
                     }
                     reader.Close();
                     string user = "";
-                    pgConnection.createUserAndPasswordString((string)hisProduct.SelectedItem, ref user);
+                    pgConnection.createUserAndPasswordString(getHisProduct(), ref user);
                     bool retval = ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(),
                                                         true, dbName, dbServerPort, user, setSearchPathTo);
 
@@ -160,7 +201,6 @@ namespace DB2GX
                 {
                     String host = dbServerName;
                     dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).InformixServer;
-
                 }
 
                 // create registry entries
@@ -254,7 +294,7 @@ namespace DB2GX
                 {
                     // this test takes too long
                     DBConnection pgConnection = new DBConnection(DBConnection.DBType.Postgres);
-                    if (pgConnection.openPGConnection(server.sv101_name, "postgres", PGPORT, (string)hisProduct.SelectedItem, true) != null)
+                    if (pgConnection.openPGConnection(server.sv101_name, "postgres", PGPORT, getHisProduct(), true) != null)
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
@@ -279,7 +319,7 @@ namespace DB2GX
             if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
             {
                 DBConnection pgConnection = new DBConnection(DBConnection.DBType.Postgres);
-                NpgsqlConnection sqlConx = (NpgsqlConnection)pgConnection.openPGConnection(currentDBServer, "postgres", currentDBServerPort, (string)hisProduct.SelectedItem,  false);
+                NpgsqlConnection sqlConx = (NpgsqlConnection)pgConnection.openPGConnection(currentDBServer, "postgres", currentDBServerPort, getHisProduct(),  false);
 
                 if (sqlConx == null)
                 {
@@ -300,7 +340,7 @@ namespace DB2GX
                         String dbName = row["database_name"].ToString();
                         if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
                         {
-                            sortedDBs.Add(dbName);
+                            sortedDBs.Add(dbName.Trim());
                         }
                     }
                     catch (Exception ex)
@@ -324,7 +364,7 @@ namespace DB2GX
                 {
                     DBConnection ifxConnection = new DBConnection(DBConnection.DBType.Informix);
 
-                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "", currentDBServerPort, (string)hisProduct.SelectedItem, false);
+                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "", currentDBServerPort, getHisProduct(), false);
                     
                     IfxCommand comm = conn.CreateCommand();
                     comm.CommandText = "select * from sysdatabases ;";
@@ -336,7 +376,7 @@ namespace DB2GX
                         String dbName = ifxDataReaders[0].ToString();
                         if (!dbName.StartsWith("sys"))
                         {
-                            sortedDBs.Add(dbName);
+                            sortedDBs.Add(dbName.Trim());
                         }
                     }
 
@@ -375,8 +415,6 @@ namespace DB2GX
             hisProduct.Items.Add(HISMBSGX);
             hisProduct.Items.Add(HISSVAGX);
              * */
-
-            hisProduct.Items.Add(HISFSVGX);
         }
 
         private void button1_Click(object sender, RoutedEventArgs e)
@@ -468,7 +506,40 @@ namespace DB2GX
 
         private void databases_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            //DBConnection.getGXVersions(String host, String db, String port);
+            DBConnection dbconn = DBConnectionSetup();
+            if (dbconn == null) return;
+            ArrayList allVersions = dbconn.getGXVersions();
+
+            hisProduct.Items.Clear();
+            foreach (Object[] versionPair in allVersions)
+            {
+                hisProduct.Items.Add(versionPair[0] + " (" + versionPair[1] + ")");
+            }
+            TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + databases.SelectedValue.ToString().Trim() + ".";
+
+        }
+
+        private DBConnection DBConnectionSetup()
+        {
+            if ((databases.SelectedItem == null) || (databaseServers.SelectedItem == null))
+                return null;
+            String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
+            String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;            
+            String dbName = databases.SelectedValue.ToString().Trim();
+
+            DBConnection dbconn = new DBConnection((comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES) ? DBConnection.DBType.Postgres : DBConnection.DBType.Informix);
+
+            if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
+            {
+                dbconn.openPGConnection(dbServerName, dbName, dbServerPort, getHisProduct(), false);
+            }
+            else
+            {
+                String ifxServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).InformixServer;
+                dbconn.openIfxConnection(dbServerName, ifxServerName, dbName, dbServerPort, getHisProduct(), false);
+            }
+
+            return dbconn;
         }
     }
 
@@ -481,14 +552,74 @@ namespace DB2GX
         };
 
         private DBType currentDBType;
+        private DbConnection dbConn;
+
 
         public DBConnection(DBType newType)
         {
             currentDBType = newType;
         }
 
-        public void getGXVersions(String host, String db, String port)
+        public NpgsqlDataReader readQuery(String query)
         {
+            NpgsqlCommand command = new NpgsqlCommand(query, (NpgsqlConnection)dbConn);
+            NpgsqlDataReader reader = null;
+            try
+            {
+                reader = command.ExecuteReader();
+            }
+            catch
+            {
+
+            }
+            return reader;
+        }
+
+        public ArrayList getGXVersions()
+        {
+            if (dbConn == null)
+                return null;
+            ArrayList allVersions = new ArrayList();
+
+            if (currentDBType == DBType.Postgres)
+            {
+                String namespaceQuery = "SELECT n.nspname || '.' || c.relname FROM pg_catalog.pg_class c LEFT JOIN pg_namespace n ON n.oid = c.relnamespace " +
+                                        "WHERE nspname !~ '^pg_.*|info-*' AND c.relname = 'db_version';";
+                NpgsqlDataReader reader = readQuery(namespaceQuery);
+                
+                ArrayList allSchemas = new ArrayList();
+                while ((reader != null) && reader.HasRows && reader.Read())
+                {
+                    String schemaName = reader.GetString(0);
+                    allSchemas.Add(schemaName);
+                }
+
+                foreach (String currentSchema in allSchemas)
+                {
+                    String versionsQuery = "SELECT his_system, version FROM " + currentSchema + " WHERE kern_system='1'";
+                    reader = readQuery(versionsQuery);
+                    while (reader != null && reader.HasRows && reader.Read())
+                    {
+                        Object[] version = new Object[reader.FieldCount];
+                        reader.GetValues(version);
+                        allVersions.Add(version);
+                    }
+                }
+
+
+            }
+
+            else if (currentDBType == DBType.Informix)
+            {
+
+            }
+
+            return allVersions;
+
+
+            
+            //DbCommand dbcommand = new DbCommand();
+            //dbConn.sq
         }
 
         public String createUserAndPasswordString(String product, ref String user)
@@ -514,7 +645,6 @@ namespace DB2GX
         private DbConnection openDBConnection(String host, String informixServer, String db, String port, String product, bool silent)
         {
             String user = "", connString;
-            DbConnection dbConn;
 
             if (currentDBType == DBType.Postgres)
             {
