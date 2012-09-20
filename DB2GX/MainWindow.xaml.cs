@@ -341,6 +341,9 @@ namespace DB2GX
                     try
                     {
                         String dbName = row["database_name"].ToString();
+                        String dbOwner = row["owner"].ToString();
+                        String dbEncoding = row["encoding"].ToString();
+
                         if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
                         {
                             sortedDBs.Add(dbName.Trim());
@@ -369,14 +372,13 @@ namespace DB2GX
 
                     IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "sysmaster", currentDBServerPort, getHisProduct(), false);
                     
-                    IfxCommand comm = conn.CreateCommand();
-                    comm.CommandText = "SELECT * FROM sysdatabases;";
+                    String commandText = "SELECT sysdatabases.name, sysdatabases.owner, sysdbslocale.dbs_collate FROM sysdbslocale INNER JOIN sysdatabases ON sysdatabases.name = sysdbslocale.dbs_dbsname;";
 
-                    IfxDataReader ifxDataReaders = comm.ExecuteReader();
+                    IfxDataReader reader = (IfxDataReader)ifxConnection.readQuery(commandText);
 
-                    while (ifxDataReaders.Read())
+                    while ((reader != null) && reader.HasRows && reader.Read())
                     {
-                        String dbName = ifxDataReaders[0].ToString();
+                        String dbName = reader[0].ToString();
                         if (!dbName.StartsWith("sys"))
                         {
                             sortedDBs.Add(dbName.Trim());
