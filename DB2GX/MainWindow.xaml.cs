@@ -387,7 +387,7 @@ namespace DB2GX
 
                     conn.Close();
 
-                }
+                }                
                 catch (IfxException ex)
                 {
                     MessageBox.Show("Failed opening connection: " + ex);
@@ -395,6 +395,12 @@ namespace DB2GX
                     return;
                 }
                 catch (TypeInitializationException ex)
+                {
+                    MessageBox.Show("Failed opening connection: " + ex);
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
+                }
+                catch (Exception ex)
                 {
                     MessageBox.Show("Failed opening connection: " + ex);
                     TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
