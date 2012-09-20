@@ -26,7 +26,7 @@ namespace DB2GX
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
         ArrayList userDBs; // not String, but special ComboBox!
-        BackgroundWorker bw;
+        public BackgroundWorker bw;
 
         public const String HISMBSGX = "HISMBS-GX";
         public const String HISFSVGX = "HISFSV-GX";
@@ -299,7 +299,9 @@ namespace DB2GX
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
-                        userDBs.Add(new ComboBoxServer(server.sv101_name, PGPORT, nameToShow));
+
+                        Dispatcher.Invoke(new Action(() => { userDBs.Add(new ComboBoxServer(server.sv101_name, PGPORT, nameToShow)); }), System.Windows.Threading.DispatcherPriority.Normal, null);
+
                     }
                 }
             }
@@ -365,10 +367,10 @@ namespace DB2GX
                 {
                     DBConnection ifxConnection = new DBConnection(DBConnection.DBType.Informix);
 
-                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "", currentDBServerPort, getHisProduct(), false);
+                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "sysmaster", currentDBServerPort, getHisProduct(), false);
                     
                     IfxCommand comm = conn.CreateCommand();
-                    comm.CommandText = "select * from sysdatabases ;";
+                    comm.CommandText = "SELECT * FROM sysdatabases;";
 
                     IfxDataReader ifxDataReaders = comm.ExecuteReader();
 
@@ -478,7 +480,7 @@ namespace DB2GX
             bw = new BackgroundWorker();
             bw.DoWork += new DoWorkEventHandler(findUserDBs);
             bw.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker1_RunWorkerCompleted);
-            bw.WorkerSupportsCancellation = true;
+            bw.WorkerSupportsCancellation = true;         
             bw.RunWorkerAsync();
         }
 
@@ -514,7 +516,7 @@ namespace DB2GX
             hisProduct.Items.Clear();
             foreach (Object[] versionPair in allVersions)
             {
-                hisProduct.Items.Add(versionPair[0] + " (" + versionPair[1] + ")");
+                hisProduct.Items.Add(versionPair[0].ToString().Trim() + " (" + versionPair[1].ToString().Trim() + ")");
             }
             TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + databases.SelectedValue.ToString().Trim() + ".";
 
@@ -561,10 +563,14 @@ namespace DB2GX
             currentDBType = newType;
         }
 
-        public NpgsqlDataReader readQuery(String query)
+        public DbDataReader readQuery(String query)
         {
-            NpgsqlCommand command = new NpgsqlCommand(query, (NpgsqlConnection)dbConn);
-            NpgsqlDataReader reader = null;
+            DbCommand command = null;
+            if (currentDBType == DBType.Postgres)
+                command = new NpgsqlCommand(query, (NpgsqlConnection)dbConn);
+            else
+                command = new IfxCommand(query, (IfxConnection)dbConn);
+            DbDataReader reader = null;
             try
             {
                 reader = command.ExecuteReader();
@@ -581,12 +587,14 @@ namespace DB2GX
             if (dbConn == null)
                 return null;
             ArrayList allVersions = new ArrayList();
+            String versionsQuery;
+            DbDataReader reader;
 
             if (currentDBType == DBType.Postgres)
             {
                 String namespaceQuery = "SELECT n.nspname || '.' || c.relname FROM pg_catalog.pg_class c LEFT JOIN pg_namespace n ON n.oid = c.relnamespace " +
                                         "WHERE nspname !~ '^pg_.*|info-*' AND c.relname = 'db_version';";
-                NpgsqlDataReader reader = readQuery(namespaceQuery);
+                reader = (NpgsqlDataReader)readQuery(namespaceQuery);
                 
                 ArrayList allSchemas = new ArrayList();
                 while ((reader != null) && reader.HasRows && reader.Read())
@@ -597,8 +605,8 @@ namespace DB2GX
 
                 foreach (String currentSchema in allSchemas)
                 {
-                    String versionsQuery = "SELECT his_system, version FROM " + currentSchema + " WHERE kern_system='1'";
-                    reader = readQuery(versionsQuery);
+                    versionsQuery = "SELECT his_system, version FROM " + currentSchema + " WHERE kern_system='1';";
+                    reader = (NpgsqlDataReader)readQuery(versionsQuery);
                     while (reader != null && reader.HasRows && reader.Read())
                     {
                         Object[] version = new Object[reader.FieldCount];
@@ -612,7 +620,16 @@ namespace DB2GX
 
             else if (currentDBType == DBType.Informix)
             {
+                versionsQuery = "SELECT his_system, version FROM db_version WHERE kern_system='1';";
 
+                reader = (IfxDataReader)readQuery(versionsQuery);
+
+                while (reader != null && reader.HasRows && reader.Read())
+                {
+                    Object[] version = new Object[reader.FieldCount];
+                    reader.GetValues(version);
+                    allVersions.Add(version);
+                }
             }
 
             return allVersions;
@@ -655,7 +672,7 @@ namespace DB2GX
             }
             else
             {
-                connString = "Database=sysmaster;" + createUserAndPasswordString(product, ref user) +
+                connString = "Database=" + db + ";" + createUserAndPasswordString(product, ref user) +
                                 "Host=" + host + ";Server=" + informixServer + ";" +
                                 "Service=" + port + ";Protocol=onsoctcp;";                
             }
