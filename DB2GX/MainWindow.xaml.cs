@@ -6,13 +6,14 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using IBM.Data.Informix;
 using Microsoft.Win32;
 using Npgsql;
-using IBM.Data.Informix;
-using System.Security.Principal;
 
 
 namespace DB2GX
@@ -25,7 +26,7 @@ namespace DB2GX
         ArrayList localhostDBs;
         ArrayList castorDBs;
         ArrayList vmpostgres90DBs;
-        ArrayList userDBs; // not String, but special ComboBox!
+        ArrayList outfilteredDBs; // not String, but special ComboBox!
         public BackgroundWorker bw;
 
         public const String HISMBSGX = "HISMBS-GX";
@@ -67,7 +68,7 @@ namespace DB2GX
             localhostDBs = new ArrayList();
             castorDBs = new ArrayList();
             vmpostgres90DBs = new ArrayList();
-            userDBs = new ArrayList();
+            outfilteredDBs = new ArrayList();
 
             if (!IsUserAdministrator())
             {
@@ -121,7 +122,7 @@ namespace DB2GX
             try
             {
                 String setSearchPathTo = "";
-                String dbName = databases.SelectedValue.ToString().Trim();
+                String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
                 String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
                 String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
                 String hisProductName = getHisProduct();
@@ -208,7 +209,7 @@ namespace DB2GX
 
                 TextBlockStatus.Text = "Datenbank " + dbName + " erfolgreich eingerichtet; Verfügbar über Eintrag " + entryName + ".";
                 // reload list for immediate deletion of new database
-                comboBox1_Loaded(null, null);
+                comboBox_delete_Loaded(null, null);
             }
             catch (Exception ex)
             {
@@ -272,17 +273,17 @@ namespace DB2GX
                 //                TextBlockStatus.Text = e.Result.ToString();
             }
 
-            // do remaining work.
-            foreach (ComboBoxServer server in userDBs)
-            {
-                databaseServers.Items.Add(server);
-            }
+            // do remaining work.            
         }
 
         private void findUserDBs(object sender, DoWorkEventArgs e)
         {
-            BackgroundWorker worker = sender as BackgroundWorker;
             Thread.CurrentThread.Priority = ThreadPriority.Lowest;
+
+            BackgroundWorker worker = sender as BackgroundWorker;
+
+            Dispatcher.Invoke(new Action(() => { databaseServers_Loaded(null, null); }));
+            
             List<Win32.NetApi32.SERVER_INFO_101> serverList = Win32.NetApi32.GetServerList(Win32.NetApi32.SV_101_TYPES.SV_TYPE_ALL);
 
             foreach (Win32.NetApi32.SERVER_INFO_101 server in serverList)
@@ -300,7 +301,7 @@ namespace DB2GX
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
 
-                        Dispatcher.Invoke(new Action(() => { userDBs.Add(new ComboBoxServer(server.sv101_name, PGPORT, nameToShow)); }), System.Windows.Threading.DispatcherPriority.Normal, null);
+                        Dispatcher.Invoke(new Action(() => { databaseServers.Items.Add(new ComboBoxServer(server.sv101_name, PGPORT, nameToShow)); }), System.Windows.Threading.DispatcherPriority.Background, null);
 
                     }
                 }
@@ -340,13 +341,14 @@ namespace DB2GX
                 {
                     try
                     {
-                        String dbName = row["database_name"].ToString();
-                        String dbOwner = row["owner"].ToString();
-                        String dbEncoding = row["encoding"].ToString();
+                        String dbName = row["database_name"].ToString().Trim();
+                        String dbOwner = row["owner"].ToString().Trim();
+                        String dbEncoding = row["encoding"].ToString().Trim();
 
                         if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
                         {
-                            sortedDBs.Add(dbName.Trim());
+                            sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
+                            //sortedDBs.Add(dbName.Trim());
                         }
                     }
                     catch (Exception ex)
@@ -354,7 +356,7 @@ namespace DB2GX
                         MessageBox.Show("Error: " + ex.Message);
                         return;
                     }
-                }
+                }                
             }
             else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
             {
@@ -372,16 +374,21 @@ namespace DB2GX
 
                     IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "sysmaster", currentDBServerPort, getHisProduct(), false);
                     
-                    String commandText = "SELECT sysdatabases.name, sysdatabases.owner, sysdbslocale.dbs_collate FROM sysdbslocale INNER JOIN sysdatabases ON sysdatabases.name = sysdbslocale.dbs_dbsname;";
+                    String commandText = "SELECT sysdatabases.name, sysdatabases.owner, sysdbslocale.dbs_collate " + 
+                                         "FROM sysdbslocale INNER JOIN sysdatabases ON sysdatabases.name = sysdbslocale.dbs_dbsname " +
+                                         "ORDER BY sysdatabases.name;";
 
                     IfxDataReader reader = (IfxDataReader)ifxConnection.readQuery(commandText);
 
                     while ((reader != null) && reader.HasRows && reader.Read())
                     {
-                        String dbName = reader[0].ToString();
+                        String dbName = reader[0].ToString().Trim();
+                        String dbOwner = reader[1].ToString().Trim();
+                        String dbEncoding = reader[2].ToString().Trim();
                         if (!dbName.StartsWith("sys"))
                         {
-                            sortedDBs.Add(dbName.Trim());
+                            sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
+                            //sortedDBs.Add(dbName.Trim());
                         }
                     }
 
@@ -407,15 +414,18 @@ namespace DB2GX
                     return;
                 }
 
-            }
+            }            
 
-            sortedDBs.Sort();
+            //sortedDBs.Sort();
 
             this.databases.Items.Clear();
-            foreach (String db in sortedDBs)
+            foreach (ComboBoxDatabase db in sortedDBs)
             {
                 this.databases.Items.Add(db);
             }
+            // filter when called normally
+            if (sender != null)
+                textBox_filterDBs_TextChanged(null, null);
             TextBlockStatus.Text = "Server " + currentDBServer + " hat " + databases.Items.Count + " Datenbanken verfügbar.";
         }        
 
@@ -433,10 +443,10 @@ namespace DB2GX
             createNewEntry();
         }
 
-        private void comboBox1_Loaded(object sender, RoutedEventArgs e)
+        private void comboBox_delete_Loaded(object sender, RoutedEventArgs e)
         {
             // get all entries, in ODBC and in Registry
-            comboBox1.Items.Clear();
+            comboBox_delete.Items.Clear();
             // ODBC
             string[] values = ODBCManager.GetAllDSN();
 
@@ -448,30 +458,30 @@ namespace DB2GX
 
             foreach (String entry in values)
             {
-                comboBox1.Items.Add(entry);
+                comboBox_delete.Items.Add(entry);
             }
         }
 
         private void button2_Click(object sender, RoutedEventArgs e)
         {
-            if (comboBox1.SelectedItem == null)
+            if (comboBox_delete.SelectedItem == null)
             {
                 MessageBox.Show("Fehlende Eingabe!");
                 return;
             }
-            String rememberItem = comboBox1.SelectedValue.ToString();
+            String rememberItem = comboBox_delete.SelectedValue.ToString();
             ODBCManager.RemoveDSN(rememberItem);
             RegistryManager.DeleteEntry(rememberItem);
             // refresh list
-            comboBox1_Loaded(null, null);
+            comboBox_delete_Loaded(null, null);
             TextBlockStatus.Text = "Alle Einträge von \"" + rememberItem + "\" aus der Registry und ODBC Quellen gelöscht.";
         }
 
-        private void comboBox1_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void comboBox_delete_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (comboBox1.SelectedValue != null)
+            if (comboBox_delete.SelectedValue != null)
             {
-                textBox1.Text = "Treiber: " + ODBCManager.GetValue(comboBox1.SelectedValue.ToString(), "Driver");
+                textBox1.Text = "Treiber: " + ODBCManager.GetValue(comboBox_delete.SelectedValue.ToString(), "Driver");
             }
             else
             {
@@ -488,14 +498,14 @@ namespace DB2GX
             bw = new BackgroundWorker();
             bw.DoWork += new DoWorkEventHandler(findUserDBs);
             bw.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker1_RunWorkerCompleted);
-            bw.WorkerSupportsCancellation = true;         
+            bw.WorkerSupportsCancellation = true;
             bw.RunWorkerAsync();
         }
 
         private void checkBox1_Unchecked(object sender, RoutedEventArgs e)
         {
             // kill background worker
-            bw.CancelAsync();
+            if (bw.IsBusy) bw.CancelAsync();            
         }
 
         private void comboBoxEncoding_Loaded(object sender, RoutedEventArgs e)
@@ -526,7 +536,7 @@ namespace DB2GX
             {
                 hisProduct.Items.Add(versionPair[0].ToString().Trim() + " (" + versionPair[1].ToString().Trim() + ")");
             }
-            TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + databases.SelectedValue.ToString().Trim() + ".";
+            TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + ((ComboBoxDatabase)(databases.SelectedItem)).Name + ".";
 
         }
 
@@ -535,8 +545,8 @@ namespace DB2GX
             if ((databases.SelectedItem == null) || (databaseServers.SelectedItem == null))
                 return null;
             String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
-            String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;            
-            String dbName = databases.SelectedValue.ToString().Trim();
+            String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
+            String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
 
             DBConnection dbconn = new DBConnection((comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES) ? DBConnection.DBType.Postgres : DBConnection.DBType.Informix);
 
@@ -551,6 +561,27 @@ namespace DB2GX
             }
 
             return dbconn;
+        }
+
+        private void textBox_filterDBs_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+            if (sender != null)
+                databaseServers_SelectionChanged(null, null);
+
+            outfilteredDBs.Clear();
+
+            if (textBox_filterDBs.Text == "") return;
+
+            foreach (ComboBoxDatabase db in databases.Items)
+            {
+                if (!db.Name.ToLowerInvariant().Contains(textBox_filterDBs.Text.ToLowerInvariant()))
+                {
+                    outfilteredDBs.Add(db);
+                }
+            }
+            foreach (String db in outfilteredDBs)
+                databases.Items.Remove(db);
         }
     }
 
@@ -702,6 +733,20 @@ namespace DB2GX
                 return null;
             }
             return dbConn;
+        }
+    }
+
+    public class ComboBoxDatabase
+    {
+        public string Name { get; set; }
+        public string Owner { get; set; }
+        public string Encoding { get; set; }
+
+        public ComboBoxDatabase(String name, String owner, String encoding)
+        {
+            Name = name;
+            Owner = owner;
+            Encoding = encoding;
         }
     }
 
