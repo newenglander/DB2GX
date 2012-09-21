@@ -692,7 +692,7 @@ namespace DB2GX
             
             if (product == MainWindow.HISSVAGX)
                 user = "sva";
-            if (product == MainWindow.HISCOBGX)
+            else if (product == MainWindow.HISCOBGX)
                 user = "cob";
             else // HISFSVGX, HISMBSGX or initial contact
                 user = "fsv";
