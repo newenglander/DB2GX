@@ -32,6 +32,7 @@ namespace DB2GX
         public const String HISMBSGX = "HISMBS-GX";
         public const String HISFSVGX = "HISFSV-GX";
         public const String HISSVAGX = "HISSVA-GX";
+        public const String HISCOBGX = "HISCOBGX-GX";
         public const String PGPORT = "5432";
 
         public const String PGANSI = "PostgreSQL ANSI";
@@ -106,14 +107,23 @@ namespace DB2GX
         {
             String hisProductName = (String)hisProduct.SelectedValue;
 
+            if ((hisProductName == null) && (databases.SelectedItem != null))
+            {
+                
+                String dbowner = ((ComboBoxDatabase)databases.SelectedItem).Owner;
+                if (dbowner == "sva")
+                    return HISSVAGX;
+                else if (dbowner == "cob")
+                    return HISCOBGX;
+            }
+
             return (hisProductName == null) ? hisProductName : hisProductName.Split(' ')[0];
         }
 
 
         private void createNewEntry()
         {
-            if ((comboBoxDBType.SelectedIndex == -1) || (databaseServers.SelectedIndex == -1) || (databases.SelectedIndex == -1) || (hisProduct.SelectedIndex == -1) || 
-                ((comboBoxEncoding.SelectedIndex == -1) && (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)))
+            if ((comboBoxDBType.SelectedIndex == -1) || (databaseServers.SelectedIndex == -1) || (databases.SelectedIndex == -1) || (hisProduct.SelectedIndex == -1))
             {
                 MessageBox.Show("Fehlende Eingabe!");
                 return;
@@ -166,7 +176,8 @@ namespace DB2GX
                     reader.Close();
                     string user = "";
                     pgConnection.createUserAndPasswordString(getHisProduct(), ref user);
-                    bool retval = ODBCManager.CreateDSN(entryName, dbServerName, comboBoxEncoding.SelectedItem.ToString(),
+                    String driverName = "blah";
+                    bool retval = ODBCManager.CreateDSN(entryName, dbServerName, driverName,
                                                         true, dbName, dbServerPort, user, setSearchPathTo);
 
                     if (!retval)
@@ -231,7 +242,6 @@ namespace DB2GX
                 //databaseServers.Items.Add(new ComboBoxServer("his2843", PGPORT));
 
                 checkBoxLoadUserDBs.IsEnabled = true;
-                comboBoxEncoding.IsEnabled = true;
             }
             else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
             {
@@ -242,8 +252,6 @@ namespace DB2GX
                 databaseServers.Items.Add(new ComboBoxServer("his2843", "1526", "", "ol_his2843"));
                 checkBoxLoadUserDBs.IsChecked = false;
                 checkBoxLoadUserDBs.IsEnabled = false;
-                comboBoxEncoding.IsEnabled = false;
-                comboBoxEncoding.SelectedIndex = -1;
             }
         }
 
@@ -332,12 +340,14 @@ namespace DB2GX
                 }
 
                 DataTable tblDatabases = sqlConx.GetSchema("Databases");
+                DataView view = tblDatabases.DefaultView;
+                view.Sort = "database_name";
 
                 sqlConx.Close();
 
-                this.databases.Items.Clear();                
+                this.databases.Items.Clear();
 
-                foreach (DataRow row in tblDatabases.Rows)
+                foreach (DataRowView row in view)
                 {
                     try
                     {
@@ -348,7 +358,6 @@ namespace DB2GX
                         if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
                         {
                             sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
-                            //sortedDBs.Add(dbName.Trim());
                         }
                     }
                     catch (Exception ex)
@@ -361,7 +370,7 @@ namespace DB2GX
             else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
             {
 
-                String currentInformixServer = ((ComboBoxServer)databaseServers.SelectedItem).InformixServer;
+                String currentInformixServer = ((ComboBoxServer)databaseServers.SelectedItem).InformixServer;                
 
                 if (!SQLHosts.EntryExists(currentInformixServer))
                 {
@@ -372,7 +381,7 @@ namespace DB2GX
                 {
                     DBConnection ifxConnection = new DBConnection(DBConnection.DBType.Informix);
 
-                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "sysmaster", currentDBServerPort, getHisProduct(), false);
+                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "sysmaster", currentDBServerPort, getHisProduct(), "" , false);
                     
                     String commandText = "SELECT sysdatabases.name, sysdatabases.owner, sysdbslocale.dbs_collate " + 
                                          "FROM sysdbslocale INNER JOIN sysdatabases ON sysdatabases.name = sysdbslocale.dbs_dbsname " +
@@ -388,7 +397,6 @@ namespace DB2GX
                         if (!dbName.StartsWith("sys"))
                         {
                             sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
-                            //sortedDBs.Add(dbName.Trim());
                         }
                     }
 
@@ -431,11 +439,6 @@ namespace DB2GX
 
         private void hisProduct_Loaded(object sender, RoutedEventArgs e)
         {
-            /*
-            hisProduct.Items.Add(HISFSVGX);
-            hisProduct.Items.Add(HISMBSGX);
-            hisProduct.Items.Add(HISSVAGX);
-             * */
         }
 
         private void button1_Click(object sender, RoutedEventArgs e)
@@ -510,8 +513,8 @@ namespace DB2GX
 
         private void comboBoxEncoding_Loaded(object sender, RoutedEventArgs e)
         {
-            comboBoxEncoding.Items.Add(PGANSI);
-            comboBoxEncoding.Items.Add(PGUNICODE);
+            //comboBoxEncoding.Items.Add(PGANSI);
+            //comboBoxEncoding.Items.Add(PGUNICODE);
         }
 
         private void comboBoxDBType_Loaded(object sender, RoutedEventArgs e)
@@ -534,10 +537,14 @@ namespace DB2GX
             hisProduct.Items.Clear();
             foreach (Object[] versionPair in allVersions)
             {
-                hisProduct.Items.Add(versionPair[0].ToString().Trim() + " (" + versionPair[1].ToString().Trim() + ")");
+                String product = versionPair[0].ToString().Trim();
+                hisProduct.Items.Add(product + " (" + versionPair[1].ToString().Trim() + ")");
+                if (product == HISFSVGX)
+                    hisProduct.Items.Add(HISMBSGX + " (" + versionPair[1].ToString().Trim() + ")");
             }
             TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + ((ComboBoxDatabase)(databases.SelectedItem)).Name + ".";
 
+            comboBoxEncoding.Text = ((ComboBoxDatabase)(databases.SelectedItem)).Encoding.ToString();
         }
 
         private DBConnection DBConnectionSetup()
@@ -557,7 +564,8 @@ namespace DB2GX
             else
             {
                 String ifxServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).InformixServer;
-                dbconn.openIfxConnection(dbServerName, ifxServerName, dbName, dbServerPort, getHisProduct(), false);
+                String currentInformixLocale = ((ComboBoxDatabase)databases.SelectedItem).Encoding;
+                dbconn.openIfxConnection(dbServerName, ifxServerName, dbName, dbServerPort, getHisProduct(), currentInformixLocale, false);
             }
 
             return dbconn;
@@ -580,7 +588,7 @@ namespace DB2GX
                     outfilteredDBs.Add(db);
                 }
             }
-            foreach (String db in outfilteredDBs)
+            foreach (ComboBoxDatabase db in outfilteredDBs)
                 databases.Items.Remove(db);
         }
     }
@@ -684,6 +692,8 @@ namespace DB2GX
             
             if (product == MainWindow.HISSVAGX)
                 user = "sva";
+            if (product == MainWindow.HISCOBGX)
+                user = "cob";
             else // HISFSVGX, HISMBSGX or initial contact
                 user = "fsv";
             return "User Id=" + user + ";Password=" + user + "." + user + ";";
@@ -691,15 +701,15 @@ namespace DB2GX
 
         public DbConnection openPGConnection(String host, String db, String port, String product, bool silent)
         {
-            return openDBConnection(host, "", db, port, product, silent);
+            return openDBConnection(host, "", db, port, product, "", silent);
         }
 
-        public DbConnection openIfxConnection(String host, String informixServer, String db, String port, String product, bool silent)
+        public DbConnection openIfxConnection(String host, String informixServer, String db, String port, String product, String encoding, bool silent)
         {
-            return openDBConnection(host, informixServer, db, port, product, silent);
+            return openDBConnection(host, informixServer, db, port, product, encoding, silent);
         }
 
-        private DbConnection openDBConnection(String host, String informixServer, String db, String port, String product, bool silent)
+        private DbConnection openDBConnection(String host, String informixServer, String db, String port, String product, String encoding, bool silent)
         {
             String user = "", connString;
 
@@ -721,7 +731,16 @@ namespace DB2GX
                 if (currentDBType == DBType.Postgres)
                     dbConn = new NpgsqlConnection(connString);
                 else
+                {
                     dbConn = new IfxConnection(connString);
+                    if (encoding != "")
+                    {
+                        ((IfxConnection)dbConn).ClientLocale = encoding;
+                        ((IfxConnection)dbConn).DatabaseLocale = encoding;
+                    }
+                }
+
+                
                 dbConn.Open();
             }
             catch (Exception ex)
