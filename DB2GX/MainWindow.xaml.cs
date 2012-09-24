@@ -176,7 +176,11 @@ namespace DB2GX
                     reader.Close();
                     string user = "";
                     pgConnection.createUserAndPasswordString(getHisProduct(), ref user);
-                    String driverName = "blah";
+                    String driverName;
+                    if (((ComboBoxDatabase)databases.SelectedItem).Encoding == "LATIN1")
+                        driverName = PGANSI;
+                    else
+                        driverName = PGUNICODE;
                     bool retval = ODBCManager.CreateDSN(entryName, dbServerName, driverName,
                                                         true, dbName, dbServerPort, user, setSearchPathTo);
 
