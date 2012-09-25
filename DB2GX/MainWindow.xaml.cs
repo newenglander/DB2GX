@@ -211,6 +211,8 @@ namespace DB2GX
                                                                 ELSE make_plpgsql() END;
                                                             DROP FUNCTION make_plpgsql();", con);
                     int returnCode = command.ExecuteNonQuery();
+
+                    con.Close();
                     
                 }
                 else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
@@ -315,6 +317,7 @@ namespace DB2GX
 
                         Dispatcher.Invoke(new Action(() => { databaseServers.Items.Add(new ComboBoxServer(server.sv101_name, PGPORT, nameToShow)); }), System.Windows.Threading.DispatcherPriority.Background, null);
 
+                        pgConnection.closeConnection();
                     }
                 }
             }
@@ -405,6 +408,7 @@ namespace DB2GX
                     }
 
                     conn.Close();
+                    conn.Dispose();
 
                 }                
                 catch (IfxException ex)
@@ -427,8 +431,6 @@ namespace DB2GX
                 }
 
             }            
-
-            //sortedDBs.Sort();
 
             this.databases.Items.Clear();
             foreach (ComboBoxDatabase db in sortedDBs)
@@ -562,6 +564,8 @@ namespace DB2GX
             TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + ((ComboBoxDatabase)(databases.SelectedItem)).Name + ".";
 
             comboBoxEncoding.Text = ((ComboBoxDatabase)(databases.SelectedItem)).Encoding.ToString();
+
+            dbconn.closeConnection();
         }
 
         private DBConnection DBConnectionSetup()
@@ -678,8 +682,6 @@ namespace DB2GX
                         allVersions.Add(version);
                     }
                 }
-
-
             }
 
             else if (currentDBType == DBType.Informix)
@@ -697,11 +699,6 @@ namespace DB2GX
             }
 
             return allVersions;
-
-
-            
-            //DbCommand dbcommand = new DbCommand();
-            //dbConn.sq
         }
 
         public String createUserAndPasswordString(String product, ref String user)
@@ -714,6 +711,13 @@ namespace DB2GX
             else // HISFSVGX, HISMBSGX or initial contact
                 user = "fsv";
             return "User Id=" + user + ";Password=" + user + "." + user + ";";
+        }
+
+        public void closeConnection()
+        {
+            dbConn.Close();
+            dbConn.Dispose();
+            dbConn = null;
         }
 
         public DbConnection openPGConnection(String host, String db, String port, String product, bool silent)
@@ -743,8 +747,7 @@ namespace DB2GX
                                 "Service=" + port + ";Protocol=onsoctcp;";                
             }
 
-            try
-            {
+            
                 if (currentDBType == DBType.Postgres)
                     dbConn = new NpgsqlConnection(connString);
                 else
@@ -757,7 +760,8 @@ namespace DB2GX
                     }
                 }
 
-                
+            try
+            {    
                 dbConn.Open();
             }
             catch (Exception ex)
