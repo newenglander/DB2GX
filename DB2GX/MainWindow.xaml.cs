@@ -535,10 +535,23 @@ namespace DB2GX
         private void databases_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             DBConnection dbconn = DBConnectionSetup();
-            if (dbconn == null) return;
+            if (dbconn == null)
+            {                
+                return;
+            }
             ArrayList allVersions = dbconn.getGXVersions();
 
             hisProduct.Items.Clear();
+
+            if (allVersions.Count == 0)
+            {
+                // add standards
+                hisProduct.Items.Add(HISFSVGX + " (?????)");
+                hisProduct.Items.Add(HISMBSGX + " (?????)");
+                hisProduct.Items.Add(HISSVAGX + " (?????)");
+                hisProduct.Items.Add(HISCOBGX + " (?????)");
+            }
+
             foreach (Object[] versionPair in allVersions)
             {
                 String product = versionPair[0].ToString().Trim();
