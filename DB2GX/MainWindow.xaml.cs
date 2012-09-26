@@ -739,14 +739,16 @@ namespace DB2GX
             if (currentDBType == DBType.Postgres)
             {
                 if (db == "") db = "postgres";
-                connString = "Server=" + host + ";Port=" + port + ";Integrated Security=true;" + createUserAndPasswordString(product, ref user) + "Database=" + db + ";Timeout=1;CommandTimeout=1;";                
+                connString = "Server=" + host + ";Port=" + port + ";Integrated Security=true;" + createUserAndPasswordString(product, ref user) + 
+                             "Database=" + db + ";Timeout=1;CommandTimeout=1;";                
                 
             }
             else
             {
+                // turn off pooling, see: http://dba.stackexchange.com/a/24943/3153
                 connString = "Database=" + db + ";" + createUserAndPasswordString(product, ref user) +
-                                "Host=" + host + ";Server=" + informixServer + ";" +
-                                "Service=" + port + ";Protocol=onsoctcp;";                
+                             "Host=" + host + ";Server=" + informixServer + ";" +
+                             "Service=" + port + ";Protocol=onsoctcp;Pooling=false;";                
             }
 
             
