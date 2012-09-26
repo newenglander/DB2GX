@@ -8,31 +8,30 @@
             <ColumnDefinition Width="427*" />
         </Grid.ColumnDefinitions>
         <GroupBox Header="Neu einrichten" Height="459" HorizontalAlignment="Left" Margin="9,0,0,0" Name="groupBox1" VerticalAlignment="Top" Width="334" IsEnabled="True" Grid.ColumnSpan="2">
-            <Button Content="Einrichten" Height="58" Name="button1" Width="228" Margin="0,0,20,10" Click="button1_Click" VerticalAlignment="Bottom" HorizontalAlignment="Right" />
+            <Button Content="Einrichten" Height="58" Name="button1" Width="228" Margin="0,0,20,10" Click="button1_Click" VerticalAlignment="Bottom" HorizontalAlignment="Right" TabIndex="70" />
         </GroupBox>
         <StatusBar Height="23" HorizontalAlignment="Stretch" Name="statusBar1" VerticalAlignment="Bottom" ClipToBounds="False" Grid.ColumnSpan="2">
             <TextBlock Name="TextBlockStatus" />
-
         </StatusBar>
-        <ListBox Height="69" HorizontalAlignment="Left" Margin="91,70,0,0" Name="databaseServers" VerticalAlignment="Top" Width="232" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding}" DisplayMemberPath="Name" SelectedValuePath="Value" Grid.ColumnSpan="2" />
-        <ListBox Height="70" HorizontalAlignment="Left" Margin="91,202,0,0" Name="databases" VerticalAlignment="Top" Width="232" ItemsSource="{Binding}" SelectionChanged="databases_SelectionChanged" Grid.ColumnSpan="2" DisplayMemberPath="Name" />
-        <ListBox Height="54" HorizontalAlignment="Left" Margin="91,277,0,0" Name="hisProduct" VerticalAlignment="Top" Width="232" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" Grid.ColumnSpan="2" />
+        <ListBox DataContext="{Binding}" DisplayMemberPath="" Height="42" HorizontalAlignment="Left" ItemsSource="{Binding}" Margin="91,18,0,0" Name="comboBoxDBType" VerticalAlignment="Top" Width="232" Loaded="comboBoxDBType_Loaded" SelectionChanged="comboBoxDBType_SelectionChanged" Grid.ColumnSpan="2" TabIndex="10" />
+        <ListBox Height="69" HorizontalAlignment="Left" Margin="91,70,0,0" Name="databaseServers" VerticalAlignment="Top" Width="232" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding}" DisplayMemberPath="Name" SelectedValuePath="Value" Grid.ColumnSpan="2" TabIndex="20" />
+        <ListBox Height="70" HorizontalAlignment="Left" Margin="91,202,0,0" Name="databases" VerticalAlignment="Top" Width="232" ItemsSource="{Binding}" SelectionChanged="databases_SelectionChanged" Grid.ColumnSpan="2" DisplayMemberPath="Name" TabIndex="40" />
+        <ListBox Height="54" HorizontalAlignment="Left" Margin="91,277,0,0" Name="hisProduct" VerticalAlignment="Top" Width="232" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" Grid.ColumnSpan="2" TabIndex="50" />
         <Label Content="Server" Height="28" HorizontalAlignment="Left" Margin="17,70,0,0" Name="label1" VerticalAlignment="Top" Width="80" />
         <Label Content="Datenbank" Height="28" HorizontalAlignment="Left" Margin="17,202,0,0" Name="label2" VerticalAlignment="Top" Width="80" />
         <Label Content="GX Produkt" Height="28" HorizontalAlignment="Left" Margin="17,283,0,0" Name="label3" VerticalAlignment="Top" Width="80" />
         <GroupBox Grid.Column="1" Header="Löschen" Height="351" HorizontalAlignment="Left" Margin="63,14,0,0" Name="groupBox2" VerticalAlignment="Top" Width="334">
             <Grid Height="342" Width="333">
-                <Button Content="Löschen" Height="58" Margin="56,0,49,36" Name="button2" VerticalAlignment="Bottom" Width="228" Click="button2_Click" />
-                <ListBox Height="122" HorizontalAlignment="Left" Margin="55,27,0,0" Name="comboBox_delete" VerticalAlignment="Top" Width="239" Loaded="comboBox_delete_Loaded" SelectionChanged="comboBox_delete_SelectionChanged" />
-                <TextBox Height="39" HorizontalAlignment="Left" Margin="56,0,0,116" Name="textBox1" VerticalAlignment="Bottom" Width="223" TextWrapping="Wrap" />
+                <Button Content="Löschen" Height="58" Margin="56,0,49,36" Name="button2" VerticalAlignment="Bottom" Width="228" Click="button2_Click" TabIndex="100" />
+                <ListBox Height="122" HorizontalAlignment="Left" Margin="55,27,0,0" Name="comboBox_delete" VerticalAlignment="Top" Width="239" Loaded="comboBox_delete_Loaded" SelectionChanged="comboBox_delete_SelectionChanged" TabIndex="80" />
+                <TextBox Height="39" HorizontalAlignment="Left" Margin="56,0,0,116" Name="textBox1" VerticalAlignment="Bottom" Width="223" TextWrapping="Wrap" TabIndex="90" />
             </Grid>
         </GroupBox>
         <CheckBox Content="Benutzerdatenbanken Laden (Hintergrund)" Height="16" HorizontalAlignment="Left" Margin="38,145,0,0" Name="checkBoxLoadUserDBs" VerticalAlignment="Top" Checked="checkBox1_Checked" Unchecked="checkBox1_Unchecked" />
-        <TextBox Height="26" HorizontalAlignment="Left" Margin="91,337,0,0" Name="comboBoxEncoding" VerticalAlignment="Top" Width="232" Loaded="comboBoxEncoding_Loaded" Grid.ColumnSpan="2" IsEnabled="True" IsReadOnly="True" />
-        <Label Content="Encoding" Height="28" HorizontalAlignment="Left" Margin="17,343,0,0" Name="label4" VerticalAlignment="Top" Width="80" />
-        <ListBox DataContext="{Binding}" DisplayMemberPath="" Height="42" HorizontalAlignment="Left" ItemsSource="{Binding}" Margin="91,18,0,0" Name="comboBoxDBType" VerticalAlignment="Top" Width="232" Loaded="comboBoxDBType_Loaded" SelectionChanged="comboBoxDBType_SelectionChanged" Grid.ColumnSpan="2" />
+        <TextBox Height="26" HorizontalAlignment="Left" Margin="91,337,0,0" Name="comboBoxEncoding" VerticalAlignment="Top" Width="232" Loaded="comboBoxEncoding_Loaded" Grid.ColumnSpan="2" IsEnabled="True" IsReadOnly="True" TabIndex="2147483647" />
+        <Label Content="Encoding" Height="28" HorizontalAlignment="Left" Margin="17,343,0,0" Name="label4" VerticalAlignment="Top" Width="80" TabIndex="2147483647" />
         <Label Content="Typ" Height="28" HorizontalAlignment="Left" Margin="17,24,0,0" Name="label5" VerticalAlignment="Top" Width="80" />
-        <TextBox Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Margin="92,166,0,0" Name="textBox_filterDBs" VerticalAlignment="Top" Width="230" TextChanged="textBox_filterDBs_TextChanged" />
+        <TextBox Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Margin="92,166,0,0" Name="textBox_filterDBs" VerticalAlignment="Top" Width="230" TextChanged="textBox_filterDBs_TextChanged" TabIndex="30" />
         <Label Content="filter" Height="30" HorizontalAlignment="Left" Margin="17,166,0,0" Name="label6" VerticalAlignment="Top" Width="74" />
     </Grid>
 </Window>
