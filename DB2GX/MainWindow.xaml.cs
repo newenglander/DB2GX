@@ -687,7 +687,7 @@ namespace DB2GX
 
             else if (currentDBType == DBType.Informix)
             {
-                versionsQuery = "SELECT his_system, version FROM db_version WHERE kern_system='10';";
+                versionsQuery = "SELECT his_system, version FROM db_version WHERE kern_system='1';";
 
                 reader = (IfxDataReader)readQuery(versionsQuery);
 
