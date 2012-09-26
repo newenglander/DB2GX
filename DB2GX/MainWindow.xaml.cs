@@ -396,7 +396,8 @@ namespace DB2GX
 
                     IfxDataReader reader = (IfxDataReader)ifxConnection.readQuery(commandText);
 
-                    while ((reader != null) && reader.HasRows && reader.Read())
+                    // reader.HasRows was returning FALSE on some machines when there were rows returned
+                    while ((reader != null) && reader.Read())
                     {
                         String dbName = reader[0].ToString().Trim();
                         String dbOwner = reader[1].ToString().Trim();
@@ -686,11 +687,12 @@ namespace DB2GX
 
             else if (currentDBType == DBType.Informix)
             {
-                versionsQuery = "SELECT his_system, version FROM db_version WHERE kern_system='1';";
+                versionsQuery = "SELECT his_system, version FROM db_version WHERE kern_system='10';";
 
                 reader = (IfxDataReader)readQuery(versionsQuery);
 
-                while (reader != null && reader.HasRows && reader.Read())
+                // reader.HasRows was returning FALSE on some machines when there were rows returned
+                while (reader != null && reader.Read())
                 {
                     Object[] version = new Object[reader.FieldCount];
                     reader.GetValues(version);
