@@ -468,7 +468,8 @@ namespace DB2GX
 
             foreach (String entry in values)
             {
-                comboBox_delete.Items.Add(entry);
+                ComboBoxDelete deletable = new ComboBoxDelete(entry, null);
+                comboBox_delete.Items.Add(deletable);
             }
         }
 
@@ -836,6 +837,19 @@ namespace DB2GX
             Name = servername;
         }
     }
+
+    public class ComboBoxDelete
+    {
+        public string Name { get; set; }
+        public Array Locations { get; set; }
+
+        public ComboBoxDelete(String name, Array locations)
+        {
+            Name = name;
+            Locations = locations;
+        }
+    }
+
 
     public static class SQLHosts
     {
