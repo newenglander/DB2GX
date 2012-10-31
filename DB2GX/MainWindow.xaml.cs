@@ -511,14 +511,22 @@ namespace DB2GX
 
         private void button2_Click(object sender, RoutedEventArgs e)
         {
-            if (comboBox_delete.SelectedItem == null)
+            if ((comboBox_delete.SelectedItem == null) || (registryLoc_deletion.SelectedItem == null))
             {
                 MessageBox.Show("Fehlende Eingabe!");
                 return;
             }
-            String rememberItem = comboBox_delete.SelectedValue.ToString();
-            ODBCManager.RemoveDSN(rememberItem);
-            RegistryManager.DeleteEntry(rememberItem);
+            String rememberItem = ((ComboBoxDelete)(comboBox_delete.SelectedValue)).Name;
+            if (registryLoc_deletion.SelectedItems.Contains(EntryType.allHIS) || registryLoc_deletion.SelectedItems.Contains(EntryType.ODBC))
+                ODBCManager.RemoveDSN(rememberItem);
+            if (registryLoc_deletion.SelectedItems.Contains(EntryType.allHIS) || registryLoc_deletion.SelectedItems.Contains(EntryType.FSV))
+                RegistryManager.DeleteEntry(rememberItem, EntryType.FSV);
+            if (registryLoc_deletion.SelectedItems.Contains(EntryType.allHIS) || registryLoc_deletion.SelectedItems.Contains(EntryType.MBS))
+                RegistryManager.DeleteEntry(rememberItem, EntryType.MBS);
+            if (registryLoc_deletion.SelectedItems.Contains(EntryType.allHIS) || registryLoc_deletion.SelectedItems.Contains(EntryType.SVA))
+                RegistryManager.DeleteEntry(rememberItem, EntryType.SVA);
+            if (registryLoc_deletion.SelectedItems.Contains(EntryType.allHIS) || registryLoc_deletion.SelectedItems.Contains(EntryType.COB))
+                RegistryManager.DeleteEntry(rememberItem, EntryType.COB);
             // refresh list
             comboBox_delete_Loaded(null, null);
             TextBlockStatus.Text = "Alle Einträge von \"" + rememberItem + "\" aus der Registry und ODBC Quellen gelöscht.";
@@ -658,6 +666,7 @@ namespace DB2GX
             foreach (ComboBoxDatabase db in outfilteredDBs)
                 databases.Items.Remove(db);
         }
+
     }
 
     public class DBConnection
@@ -989,15 +998,37 @@ namespace DB2GX
             return returnValues;
         }
 
-        public static void DeleteEntry(string entry)
+        public static void DeleteEntry(string entry, MainWindow.EntryType entryLocation)
         {
-            String fullEntry = HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank\\" + entry;
-            if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
-                Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
+            String fullEntry = "";
+            if ((entryLocation == MainWindow.EntryType.allHIS) || (entryLocation == MainWindow.EntryType.FSV))
+            {
+                fullEntry = HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank\\" + entry;
+                if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
+                    Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
+            }
 
-            fullEntry = HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank\\" + entry;
-            if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
-                Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
+            if ((entryLocation == MainWindow.EntryType.allHIS) || (entryLocation == MainWindow.EntryType.MBS))
+            {
+                fullEntry = HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank\\" + entry;
+                if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
+                    Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
+            }
+
+            if ((entryLocation == MainWindow.EntryType.allHIS) || (entryLocation == MainWindow.EntryType.SVA))
+            {
+                fullEntry = HIS_REG_PATH + MainWindow.HISSVAGX + "\\Datenbank\\" + entry;
+                if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
+                    Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
+            }
+
+            if ((entryLocation == MainWindow.EntryType.allHIS) || (entryLocation == MainWindow.EntryType.COB))
+            {
+                fullEntry = HIS_REG_PATH + MainWindow.HISCOBGX + "\\Datenbank\\" + entry;
+                if (Registry.LocalMachine.OpenSubKey(fullEntry) != null)
+                    Registry.LocalMachine.DeleteSubKeyTree(fullEntry);
+            }
+
         }
     }
 
