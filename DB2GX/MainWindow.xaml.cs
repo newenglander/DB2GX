@@ -29,6 +29,17 @@ namespace DB2GX
         ArrayList outfilteredDBs; // not String, but special ComboBox!
         public BackgroundWorker bw;
 
+        public enum EntryType
+        {
+            undefined,
+            ODBC,
+            MBS,
+            FSV,
+            SVA,
+            COB,
+            allHIS
+        };
+
         public const String HISMBSGX = "HISMBS-GX";
         public const String HISFSVGX = "HISFSV-GX";
         public const String HISSVAGX = "HISSVA-GX";
@@ -458,18 +469,29 @@ namespace DB2GX
             // get all entries, in ODBC and in Registry
             comboBox_delete.Items.Clear();
             // ODBC
-            string[] values = ODBCManager.GetAllDSN();
-
-            if (values == null) return;
-
+            string[] ODBCValues = ODBCManager.GetAllDSN();
             // Registry
-            values = values.Concat(RegistryManager.GetAllEntries()).Distinct().ToArray();
-            Array.Sort(values);
+            string[] RegistryValues = RegistryManager.GetAllEntries();
 
-            foreach (String entry in values)
+            string[] allValues = new string[0];
+
+            allValues = allValues.Concat(ODBCValues).Distinct().ToArray();
+            
+
+            allValues = allValues.Concat(RegistryValues).Distinct().ToArray();
+            Array.Sort(allValues);
+
+            foreach (String entry in allValues)
             {
-                ComboBoxDelete deletable = new ComboBoxDelete(entry, null);
-                comboBox_delete.Items.Add(deletable);
+                if (entry != null)
+                {
+
+                    EntryType[] where = new EntryType[Enum.GetValues(typeof(EntryType)).Length];
+                    if (ODBCValues.Contains(entry) && !where.Contains(EntryType.ODBC))
+                        where[where.Length - 1] = EntryType.ODBC;
+                    ComboBoxDelete deletable = new ComboBoxDelete(entry, null);
+                    comboBox_delete.Items.Add(deletable);
+                }
             }
         }
 
@@ -492,7 +514,7 @@ namespace DB2GX
         {
             if (comboBox_delete.SelectedValue != null)
             {
-                textBox1.Text = "Treiber: " + ODBCManager.GetValue(comboBox_delete.SelectedValue.ToString(), "Driver");
+                textBox1.Text = "Treiber: " + ODBCManager.GetValue(((ComboBoxDelete)comboBox_delete.SelectedItem).Name, "Driver");
             }
             else
             {
@@ -905,23 +927,39 @@ namespace DB2GX
         public static string[] GetAllEntries()
         {
             String fsvPath = HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank",
-                   mbsPath = HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank";
+                   mbsPath = HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank",
+                   svaPath = HIS_REG_PATH + MainWindow.HISSVAGX + "\\Datenbank",
+                   cobPath = HIS_REG_PATH + MainWindow.HISCOBGX + "\\Datenbank";
 
             RegistryKey fsvKey = Registry.LocalMachine.OpenSubKey(fsvPath),
-                        mbsKey = Registry.LocalMachine.OpenSubKey(mbsPath);
+                        mbsKey = Registry.LocalMachine.OpenSubKey(mbsPath),
+                        svaKey = Registry.LocalMachine.OpenSubKey(svaPath),
+                        cobKey = Registry.LocalMachine.OpenSubKey(cobPath);
 
             if (fsvKey == null)
                 Registry.LocalMachine.CreateSubKey(fsvPath);
 
             if (mbsKey == null)
                 Registry.LocalMachine.CreateSubKey(mbsPath);
+            
+            if (svaKey == null)
+                Registry.LocalMachine.CreateSubKey(svaPath);
 
-            string[] returnValues = fsvKey.GetSubKeyNames();
-            string[] tempValues = mbsKey.GetSubKeyNames();
+            if (cobKey == null)
+                Registry.LocalMachine.CreateSubKey(cobPath);
+
+            string[] fsvValues = fsvKey.GetSubKeyNames();
+            string[] mbsValues = mbsKey.GetSubKeyNames();
+            string[] svaValues = svaKey.GetSubKeyNames();
+            string[] cobValues = cobKey.GetSubKeyNames();
+
+            string[] returnValues = new string[0];
             int originalLength = returnValues.Length;
-            Array.Resize<string>(ref returnValues, returnValues.Length + tempValues.Length);
-            if (tempValues.Length != 0)
-                Array.Copy(tempValues, 0, returnValues, originalLength, tempValues.Length - 1);
+            returnValues = returnValues.Concat(fsvValues).Distinct().ToArray();
+            returnValues = returnValues.Concat(mbsValues).Distinct().ToArray();
+            returnValues = returnValues.Concat(svaValues).Distinct().ToArray();
+            returnValues = returnValues.Concat(cobValues).Distinct().ToArray();
+
             return returnValues;
         }
 
@@ -1024,7 +1062,7 @@ namespace DB2GX
         }
 
         public static string[] GetAllDSN()
-        {
+        {            
             RegistryKey datasourcesKey = GetDatasourcesKey();
             if (datasourcesKey == null) return null;
             string[] returnValues = datasourcesKey.GetValueNames();
