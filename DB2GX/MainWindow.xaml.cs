@@ -37,7 +37,8 @@ namespace DB2GX
             FSV,
             SVA,
             COB,
-            allHIS
+            allHIS,
+            all
         };
 
         public const String HISMBSGX = "HISMBS-GX";
@@ -471,14 +472,19 @@ namespace DB2GX
             // ODBC
             string[] ODBCValues = ODBCManager.GetAllDSN();
             // Registry
-            string[] RegistryValues = RegistryManager.GetAllEntries();
+            string[] fsvValues = RegistryManager.GetAllEntries(EntryType.FSV);
+            string[] mbsValues = RegistryManager.GetAllEntries(EntryType.MBS);
+            string[] svaValues = RegistryManager.GetAllEntries(EntryType.SVA);
+            string[] cobValues = RegistryManager.GetAllEntries(EntryType.COB);
 
             string[] allValues = new string[0];
 
             allValues = allValues.Concat(ODBCValues).Distinct().ToArray();
-            
 
-            allValues = allValues.Concat(RegistryValues).Distinct().ToArray();
+            allValues = allValues.Concat(fsvValues).Distinct().ToArray();
+            allValues = allValues.Concat(mbsValues).Distinct().ToArray();
+            allValues = allValues.Concat(svaValues).Distinct().ToArray();
+            allValues = allValues.Concat(cobValues).Distinct().ToArray();
             Array.Sort(allValues);
 
             foreach (String entry in allValues)
@@ -488,8 +494,16 @@ namespace DB2GX
 
                     EntryType[] where = new EntryType[Enum.GetValues(typeof(EntryType)).Length];
                     if (ODBCValues.Contains(entry) && !where.Contains(EntryType.ODBC))
-                        where[where.Length - 1] = EntryType.ODBC;
-                    ComboBoxDelete deletable = new ComboBoxDelete(entry, null);
+                        where[(int)EntryType.ODBC] = EntryType.ODBC;
+                    if (fsvValues.Contains(entry) && !where.Contains(EntryType.FSV))
+                        where[(int)EntryType.FSV] = EntryType.FSV;
+                    if (mbsValues.Contains(entry) && !where.Contains(EntryType.MBS))
+                        where[(int)EntryType.MBS] = EntryType.MBS;
+                    if (svaValues.Contains(entry) && !where.Contains(EntryType.SVA))
+                        where[(int)EntryType.SVA] = EntryType.SVA;
+                    if (cobValues.Contains(entry) && !where.Contains(EntryType.COB))
+                        where[(int)EntryType.COB] = EntryType.COB;
+                    ComboBoxDelete deletable = new ComboBoxDelete(entry, where);
                     comboBox_delete.Items.Add(deletable);
                 }
             }
@@ -514,7 +528,15 @@ namespace DB2GX
         {
             if (comboBox_delete.SelectedValue != null)
             {
-                textBox1.Text = "Treiber: " + ODBCManager.GetValue(((ComboBoxDelete)comboBox_delete.SelectedItem).Name, "Driver");
+                ComboBoxDelete currentDeletion = (ComboBoxDelete)comboBox_delete.SelectedItem;
+                textBox1.Text = "Treiber: " + ODBCManager.GetValue(currentDeletion.Name, "Driver");
+                registryLoc_deletion.Items.Clear();
+                registryLoc_deletion.Items.Add(EntryType.all);
+                foreach (EntryType where in currentDeletion.Locations)
+                {
+                    if (where != EntryType.undefined)
+                        registryLoc_deletion.Items.Add(where);
+                }
             }
             else
             {
@@ -924,7 +946,7 @@ namespace DB2GX
             dbKey.SetValue("Zugriff", 1, RegistryValueKind.DWord);
         }
 
-        public static string[] GetAllEntries()
+        public static string[] GetAllEntries(MainWindow.EntryType entryType)
         {
             String fsvPath = HIS_REG_PATH + MainWindow.HISFSVGX + "\\Datenbank",
                    mbsPath = HIS_REG_PATH + MainWindow.HISMBSGX + "\\Datenbank",
@@ -955,10 +977,14 @@ namespace DB2GX
 
             string[] returnValues = new string[0];
             int originalLength = returnValues.Length;
-            returnValues = returnValues.Concat(fsvValues).Distinct().ToArray();
-            returnValues = returnValues.Concat(mbsValues).Distinct().ToArray();
-            returnValues = returnValues.Concat(svaValues).Distinct().ToArray();
-            returnValues = returnValues.Concat(cobValues).Distinct().ToArray();
+            if ((entryType == MainWindow.EntryType.allHIS) || (entryType == MainWindow.EntryType.FSV))
+                returnValues = returnValues.Concat(fsvValues).Distinct().ToArray();
+            if ((entryType == MainWindow.EntryType.allHIS) || (entryType == MainWindow.EntryType.MBS))
+                returnValues = returnValues.Concat(mbsValues).Distinct().ToArray();
+            if ((entryType == MainWindow.EntryType.allHIS) || (entryType == MainWindow.EntryType.SVA)) 
+                returnValues = returnValues.Concat(svaValues).Distinct().ToArray();
+            if ((entryType == MainWindow.EntryType.allHIS) || (entryType == MainWindow.EntryType.COB)) 
+                returnValues = returnValues.Concat(cobValues).Distinct().ToArray();
 
             return returnValues;
         }

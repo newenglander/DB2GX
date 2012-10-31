@@ -23,10 +23,10 @@
         <GroupBox Grid.Column="1" Header="Löschen" Height="431" HorizontalAlignment="Left" Margin="54,12,0,0" Name="groupBox2" VerticalAlignment="Top" Width="354">
             <Grid Height="342" Width="333">
                 <Button Content="Löschen" Height="58" Margin="79,0,26,6" Name="button2" VerticalAlignment="Bottom" Width="228" Click="button2_Click" TabIndex="100" />
-                <ListBox Height="122" HorizontalAlignment="Left" Margin="75,33,0,0" Name="comboBox_delete" VerticalAlignment="Top" Width="232" Loaded="comboBox_delete_Loaded" SelectionChanged="comboBox_delete_SelectionChanged" TabIndex="80" DisplayMemberPath="Name" />
+                <ListBox Height="122" HorizontalAlignment="Left" Margin="75,33,0,0" Name="comboBox_delete" VerticalAlignment="Top" Width="232" Loaded="comboBox_delete_Loaded" SelectionChanged="comboBox_delete_SelectionChanged" TabIndex="80" DisplayMemberPath="Name" SelectionMode="Single" />
                 <TextBox Height="39" HorizontalAlignment="Left" Margin="75,0,0,142" Name="textBox1" VerticalAlignment="Bottom" Width="232" TextWrapping="Wrap" TabIndex="90" />
-                <ListBox Height="54" HorizontalAlignment="Left" ItemsSource="{Binding}" Margin="75,206,0,0" Name="listBox1" TabIndex="50" VerticalAlignment="Top" Width="232" />
-                <Label Content="GX Produkt" Height="28" HorizontalAlignment="Left" Margin="1,212,0,0" Name="label7" VerticalAlignment="Top" Width="80" />
+                <ListBox Height="54" HorizontalAlignment="Left" ItemsSource="{Binding}" Margin="75,206,0,0" Name="registryLoc_deletion" TabIndex="50" VerticalAlignment="Top" Width="232" SelectionMode="Multiple" />
+                <Label Content="Registry" Height="28" HorizontalAlignment="Left" Margin="1,212,0,0" Name="label7" VerticalAlignment="Top" Width="80" />
             </Grid>
         </GroupBox>
         <CheckBox Content="Benutzerdatenbanken Laden (Hintergrund)" Height="16" HorizontalAlignment="Left" Margin="38,145,0,0" Name="checkBoxLoadUserDBs" VerticalAlignment="Top" Checked="checkBox1_Checked" Unchecked="checkBox1_Unchecked" />
