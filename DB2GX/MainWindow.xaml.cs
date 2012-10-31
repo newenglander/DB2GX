@@ -529,6 +529,7 @@ namespace DB2GX
                 RegistryManager.DeleteEntry(rememberItem, EntryType.COB);
             // refresh list
             comboBox_delete_Loaded(null, null);
+            registryLoc_deletion.Items.Clear();
             TextBlockStatus.Text = "Alle Einträge von \"" + rememberItem + "\" aus der Registry und ODBC Quellen gelöscht.";
         }
 
@@ -549,6 +550,7 @@ namespace DB2GX
             else
             {
                 textBox1.Clear();
+                registryLoc_deletion.Items.Clear();
             }
         }
 
