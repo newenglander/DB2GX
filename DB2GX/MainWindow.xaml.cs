@@ -52,6 +52,14 @@ namespace DB2GX
         public const String DBPOSTGRES = "PostgreSQL";
         public const String DBINFORMIX = "Informix";
 
+        public Dictionary<EntryType, String> products = new Dictionary<EntryType, String>
+        {
+            {EntryType.FSV, HISFSVGX},
+            {EntryType.MBS, HISMBSGX},
+            {EntryType.SVA, HISSVAGX},
+            {EntryType.COB, HISCOBGX}
+        };
+
         public enum SQL_RETURN_CODE : int
         {
             SQL_ERROR = -1,
@@ -550,7 +558,8 @@ namespace DB2GX
             if (comboBox_delete.SelectedValue != null)
             {
                 ComboBoxDelete currentDeletion = (ComboBoxDelete)comboBox_delete.SelectedItem;
-                textBox1.Text = "Treiber: " + ODBCManager.GetValue(currentDeletion.Name, "Driver");
+                textBox_driver.Text = ODBCManager.GetValue(currentDeletion.Name, "Driver");             
+
                 registryLoc_deletion.Items.Clear();
                 registryLoc_deletion.Items.Add(EntryType.all);
                 foreach (EntryType where in currentDeletion.Locations)
@@ -561,7 +570,7 @@ namespace DB2GX
             }
             else
             {
-                textBox1.Clear();
+                textBox_driver.Clear();
                 registryLoc_deletion.Items.Clear();
             }
         }
@@ -679,6 +688,31 @@ namespace DB2GX
             }
             foreach (ComboBoxDatabase db in outfilteredDBs)
                 databases.Items.Remove(db);
+        }
+
+        private void registryLoc_deletion_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ComboBoxDelete currentDeletion = (ComboBoxDelete)comboBox_delete.SelectedItem;
+
+            if (registryLoc_deletion.SelectedItems.Count == 1)
+            {
+                if ((EntryType)registryLoc_deletion.SelectedItem == EntryType.ODBC)
+                {
+                    textBox_deletionServerName.Text = ODBCManager.GetValue(currentDeletion.Name, "Servername");
+                    textBox_deletionDBName.Text = ODBCManager.GetValue(currentDeletion.Name, "Database");
+                }
+                else if ((EntryType)registryLoc_deletion.SelectedItem != EntryType.all)
+                {
+                    String product = products[(EntryType)registryLoc_deletion.SelectedItem];
+                    textBox_deletionServerName.Text = RegistryManager.GetValue(product, currentDeletion.Name, "DB-Server");
+                    textBox_deletionDBName.Text = RegistryManager.GetValue(product, currentDeletion.Name, "Name");
+                }
+            }
+            else
+            {
+                textBox_deletionServerName.Clear();
+                textBox_deletionDBName.Clear();
+            }
         }
 
     }
@@ -1044,6 +1078,18 @@ namespace DB2GX
             }
 
         }
+
+        public static String GetValue(string product, string dsnName, string key)
+        {
+            String retval = "";
+            String path = HIS_REG_PATH + product + "\\Datenbank" + "\\" + dsnName;
+            RegistryKey dsnKey = Registry.LocalMachine.OpenSubKey(path);
+            if (dsnKey != null)
+            {
+                retval = (String)dsnKey.GetValue(key);
+            }
+            return retval;
+        }
     }
 
     ///<summary>
@@ -1060,7 +1106,7 @@ namespace DB2GX
             RegistryKey dsnKey = Registry.LocalMachine.OpenSubKey(ODBC_INI_REG_PATH + dsnName);
             if (dsnKey != null)
             {
-                retval = dsnKey.GetValue(key).ToString();
+                retval = (String)dsnKey.GetValue(key);
             }
             return retval;
         }
