@@ -187,9 +187,9 @@ namespace DB2GX
                     reader.Read();
                     if (int.Parse(reader[0].ToString()) > 0)
                     {
-                        if ((hisProduct.SelectedItem.ToString() == HISMBSGX) || (hisProduct.SelectedItem.ToString() == HISFSVGX))
+                        if ((hisProduct.SelectedItem.ToString().Contains(HISMBSGX)) || (hisProduct.SelectedItem.ToString().Contains(HISFSVGX)))
                             setSearchPathTo = "mbs";
-                        else if (hisProduct.SelectedItem.ToString() == HISSVAGX)
+                        else if (hisProduct.SelectedItem.ToString().Contains(HISSVAGX))
                             setSearchPathTo = "sva4";
                     }
                     reader.Close();
