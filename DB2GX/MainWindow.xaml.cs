@@ -271,10 +271,7 @@ namespace DB2GX
             else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
             {
                 //databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));                
-                databaseServers.Items.Add(new ComboBoxServer("hermes", "1529", "", "hermes_onl9_net"));
-                databaseServers.Items.Add(new ComboBoxServer("apollo", "1529", "", "apollo_onl9_net"));
                 databaseServers.Items.Add(new ComboBoxServer("vmifx117", "1526", "", "vmifx117_onl11_net"));
-                databaseServers.Items.Add(new ComboBoxServer("his2843", "1526", "", "ol_his2843"));
                 checkBoxLoadUserDBs.IsChecked = false;
                 checkBoxLoadUserDBs.IsEnabled = false;
             }
