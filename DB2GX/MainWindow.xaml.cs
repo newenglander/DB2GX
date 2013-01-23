@@ -142,7 +142,7 @@ namespace DB2GX
 
         private void createNewEntry()
         {
-            if ((comboBoxDBType.SelectedIndex == -1) || (databaseServers.SelectedIndex == -1) || (databases.SelectedIndex == -1) || (hisProduct.SelectedIndex == -1))
+            if ((comboBoxDBType.SelectedIndex == -1) || (databaseServers.SelectedIndex == -1) || (databases.SelectedIndex == -1) || (hisProduct.SelectedIndex == -1) || (comboBoxEncoding.SelectedIndex == -1) || (textBoxConnectionName.Text.Trim() == ""))
             {
                 MessageBox.Show("Fehlende Eingabe!");
                 return;
@@ -155,11 +155,12 @@ namespace DB2GX
                 String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
                 String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
                 String hisProductName = getHisProduct();
-                String entryName = dbServerName + "-" + dbName;
+                String entryName = textBoxConnectionName.Text.Trim();
 
                 if (entryName.Length > 30)
                 {
-                    entryName = dbServerName.Substring(0, 3) + "-" + dbName;
+                    MessageBoxResult res = MessageBox.Show("Name zu lang!");
+                    return;
                 }
                 if (ODBCManager.DSNExists(entryName))
                 {
@@ -196,7 +197,8 @@ namespace DB2GX
                     string user = "";
                     pgConnection.createUserAndPasswordString(getHisProduct(), ref user);
                     String driverName;
-                    if (((ComboBoxDatabase)databases.SelectedItem).Encoding == "LATIN1")
+
+                    if (comboBoxEncoding.SelectedItem.ToString() == PGANSI)
                         driverName = PGANSI;
                     else
                         driverName = PGUNICODE;
@@ -637,7 +639,29 @@ namespace DB2GX
             }
             TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + ((ComboBoxDatabase)(databases.SelectedItem)).Name + ".";
 
-            comboBoxEncoding.Text = ((ComboBoxDatabase)(databases.SelectedItem)).Encoding.ToString();
+            comboBoxEncoding.Items.Clear();
+            if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
+            {
+                comboBoxEncoding.Items.Add(PGANSI);
+                comboBoxEncoding.Items.Add(PGUNICODE);
+            }
+            else
+            {
+                int itemNum = comboBoxEncoding.Items.Add(((ComboBoxDatabase)(databases.SelectedItem)).Encoding.ToString());
+                comboBoxEncoding.SelectedIndex = itemNum;
+            }
+
+            String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
+            String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;                      
+            String entryName = dbServerName + "-" + dbName;
+
+            if (entryName.Length > 30)
+            {
+                entryName = dbServerName.Substring(0, 3) + "-" + dbName;
+            }
+
+            textBoxConnectionName.Text = entryName;
+
 
             dbconn.closeConnection();
         }
