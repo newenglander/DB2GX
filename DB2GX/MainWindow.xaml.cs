@@ -192,6 +192,8 @@ namespace DB2GX
                             setSearchPathTo = "mbs";
                         else if (hisProduct.SelectedItem.ToString().Contains(HISSVAGX))
                             setSearchPathTo = "sva4";
+                        else if (hisProduct.SelectedItem.ToString().Contains(HISCOBGX))
+                            setSearchPathTo = "cob";
                     }
                     reader.Close();
                     string user = "";
