@@ -1008,7 +1008,8 @@ namespace DB2GX
 
         public static void CreateEntry(String productName, String entryName, String databaseServer, String databaseName, String databaseType)
         {
-            var dbKey = Registry.LocalMachine.CreateSubKey(HIS_REG_PATH + "\\" + productName + "\\" + "Datenbank\\" + entryName);
+            String newEntryPath = HIS_REG_PATH + "\\" + productName + "\\Datenbank\\" + entryName;
+            var dbKey = Registry.LocalMachine.CreateSubKey(newEntryPath);
             if (dbKey == null) throw new Exception("Registry key for DB was not created");
             dbKey.SetValue("DB-Server", databaseServer);            
             dbKey.SetValue("ODBCAutoCommit", 0, RegistryValueKind.DWord);
@@ -1022,6 +1023,11 @@ namespace DB2GX
             {
                 dbKey.SetValue("Name", databaseName);
                 dbKey.SetValue("Typ", 1, RegistryValueKind.DWord);
+                var sqlStatementsKey = Registry.LocalMachine.CreateSubKey(newEntryPath + "\\SQLStatements");
+                if (sqlStatementsKey == null) throw new Exception("Registry key for SQLStatements was not created");
+                sqlStatementsKey.SetValue("1", "Set Lock Mode to Wait 60");
+                sqlStatementsKey.SetValue("2", "Set Isolation to Dirty Read");
+                sqlStatementsKey.SetValue("3", "Execute Procedure userrole()");
             }
             dbKey.SetValue("Zugriff", 1, RegistryValueKind.DWord);
         }
