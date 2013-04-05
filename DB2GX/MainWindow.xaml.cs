@@ -43,7 +43,7 @@ namespace DB2GX
         public const String HISMBSGX = "HISMBS-GX";
         public const String HISFSVGX = "HISFSV-GX";
         public const String HISSVAGX = "HISSVA-GX";
-        public const String HISCOBGX = "HISCOBGX-GX";
+        public const String HISCOBGX = "HISCOB-GX";
         public const String PGPORT = "5432";
 
         public const String PGANSI = "PostgreSQL ANSI";
