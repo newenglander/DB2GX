@@ -153,7 +153,7 @@ namespace DB2GX
                 String setSearchPathTo = "";
                 String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
                 String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
-                String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
+                String dbServerPort = textBox_Port.Text;
                 String hisProductName = getHisProduct();
                 String entryName = textBoxConnectionName.Text.Trim();
 
@@ -279,6 +279,7 @@ namespace DB2GX
                 checkBoxLoadUserDBs.IsChecked = false;
                 checkBoxLoadUserDBs.IsEnabled = false;
             }
+            textBox_Port.Clear();
         }
 
         // This event handler deals with the results of the
@@ -330,12 +331,12 @@ namespace DB2GX
                     // this test takes too long
                     DBConnection pgConnection = new DBConnection(DBConnection.DBType.Postgres);
 
-                    if (pgConnection.openPGConnection(server.sv101_name, "postgres", PGPORT, "", true) != null)
+                    if (pgConnection.openPGConnection(server.sv101_name, "postgres", textBox_Port.Text, "", true) != null)
                     {
                         nameToShow = nameToShow.Replace("UB1", "");
                         nameToShow = nameToShow.Trim('-', ' ');
 
-                        Dispatcher.Invoke(new Action(() => { databaseServers.Items.Add(new ComboBoxServer(server.sv101_name, PGPORT, nameToShow)); }), System.Windows.Threading.DispatcherPriority.Background, null);
+                        Dispatcher.Invoke(new Action(() => { databaseServers.Items.Add(new ComboBoxServer(server.sv101_name, textBox_Port.Text, nameToShow)); }), System.Windows.Threading.DispatcherPriority.Background, null);
 
                         pgConnection.closeConnection();
                     }
@@ -348,10 +349,21 @@ namespace DB2GX
             if (databaseServers.SelectedItem == null)
                 return;
 
+            databases.Items.Clear();
+
             ArrayList sortedDBs = new ArrayList();
 
             String currentDBServer = ((ComboBoxServer)databaseServers.SelectedItem).ServerName;
-            String currentDBServerPort = ((ComboBoxServer)databaseServers.SelectedItem).Port;
+            String currentDBServerPort = "";
+
+
+            if (textBox_Port.Text == "")
+            {
+                currentDBServerPort = ((ComboBoxServer)databaseServers.SelectedItem).Port;
+                textBox_Port.Text = currentDBServerPort;
+            }
+            else
+                currentDBServerPort = textBox_Port.Text;
 
             TextBlockStatus.Text = "Verfügbare Datenbanken werden in " + currentDBServer + " gesucht.";
 
@@ -673,7 +685,7 @@ namespace DB2GX
             if ((databases.SelectedItem == null) || (databaseServers.SelectedItem == null))
                 return null;
             String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
-            String dbServerPort = ((ComboBoxServer)(databaseServers.SelectedItem)).Port;
+            String dbServerPort = textBox_Port.Text;
             String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
 
             DBConnection dbconn = new DBConnection((comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES) ? DBConnection.DBType.Postgres : DBConnection.DBType.Informix);
@@ -736,6 +748,12 @@ namespace DB2GX
                 textBox_deletionServerName.Clear();
                 textBox_deletionDBName.Clear();
             }
+        }
+
+
+        private void textBox_Port_LostFocus(object sender, RoutedEventArgs e)
+        {
+            databaseServers_SelectionChanged(sender, null);
         }
 
     }
