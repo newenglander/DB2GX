@@ -142,7 +142,9 @@ namespace DB2GX
 
         private void createNewEntry()
         {
-            if ((comboBoxDBType.SelectedIndex == -1) || (databaseServers.SelectedIndex == -1) || (databases.SelectedIndex == -1) || (hisProduct.SelectedIndex == -1) || (comboBoxEncoding.SelectedIndex == -1) || (textBoxConnectionName.Text.Trim() == ""))
+            if ((comboBoxDBType.SelectedIndex == -1) || ((databaseServers.SelectedIndex == -1) && textBox_Server.Text == "")|| 
+                (databases.SelectedIndex == -1) || (hisProduct.SelectedIndex == -1) || 
+                (comboBoxEncoding.SelectedIndex == -1) || (textBoxConnectionName.Text.Trim() == ""))
             {
                 MessageBox.Show("Fehlende Eingabe!");
                 return;
@@ -152,7 +154,7 @@ namespace DB2GX
             {
                 String setSearchPathTo = "";
                 String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
-                String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
+                String dbServerName = textBox_Server.Text;
                 String dbServerPort = textBox_Port.Text;
                 String hisProductName = getHisProduct();
                 String entryName = textBoxConnectionName.Text.Trim();
@@ -268,7 +270,8 @@ namespace DB2GX
                 databaseServers.Items.Add(new ComboBoxServer("localhost", PGPORT));
                 databaseServers.Items.Add(new ComboBoxServer("vmpostgres90", PGPORT));
                 databaseServers.Items.Add(new ComboBoxServer("vmpostgres91", PGPORT));
-                //databaseServers.Items.Add(new ComboBoxServer("his2843", PGPORT));
+                databaseServers.Items.Add(new ComboBoxServer("vmpostgres92", PGPORT));
+                //databaseServers.Items.Add(new ComboBoxServer("his4122", PGPORT));
 
                 checkBoxLoadUserDBs.IsEnabled = true;
             }
@@ -342,145 +345,7 @@ namespace DB2GX
                     }
                 }
             }
-        }        
-
-        private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            if (databaseServers.SelectedItem == null)
-                return;
-
-            databases.Items.Clear();
-
-            ArrayList sortedDBs = new ArrayList();
-
-            String currentDBServer = ((ComboBoxServer)databaseServers.SelectedItem).ServerName;
-            String currentDBServerPort = "";
-
-
-            if (textBox_Port.Text == "")
-            {
-                currentDBServerPort = ((ComboBoxServer)databaseServers.SelectedItem).Port;
-                textBox_Port.Text = currentDBServerPort;
-            }
-            else
-                currentDBServerPort = textBox_Port.Text;
-
-            TextBlockStatus.Text = "Verfügbare Datenbanken werden in " + currentDBServer + " gesucht.";
-
-            if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
-            {
-                DBConnection pgConnection = new DBConnection(DBConnection.DBType.Postgres);
-                NpgsqlConnection sqlConx = (NpgsqlConnection)pgConnection.openPGConnection(currentDBServer, "postgres", currentDBServerPort, getHisProduct(),  false);
-
-                if (sqlConx == null)
-                {
-                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
-                    return;
-                }
-
-                DataTable tblDatabases = sqlConx.GetSchema("Databases");
-                DataView view = tblDatabases.DefaultView;
-                view.Sort = "database_name";
-
-                sqlConx.Close();
-
-                this.databases.Items.Clear();
-
-                foreach (DataRowView row in view)
-                {
-                    try
-                    {
-                        String dbName = row["database_name"].ToString().Trim();
-                        String dbOwner = row["owner"].ToString().Trim();
-                        String dbEncoding = row["encoding"].ToString().Trim();
-
-                        if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
-                        {
-                            sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Error: " + ex.Message);
-                        return;
-                    }
-                }                
-            }
-            else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
-            {
-
-                String currentInformixServer = ((ComboBoxServer)databaseServers.SelectedItem).InformixServer;                
-
-                if (!SQLHosts.EntryExists(currentInformixServer))
-                {
-                    SQLHosts.CreateEntry(currentInformixServer, currentDBServer, currentDBServerPort);
-                }
-
-                try
-                {
-                    DBConnection ifxConnection = new DBConnection(DBConnection.DBType.Informix);
-
-                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "sysmaster", currentDBServerPort, getHisProduct(), "" , false);
-
-                    if (conn == null)
-                    {
-                        TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
-                        return;
-                    }
-
-                    String commandText = "SELECT sysdatabases.name, sysdatabases.owner, sysdbslocale.dbs_collate " + 
-                                         "FROM sysdbslocale INNER JOIN sysdatabases ON sysdatabases.name = sysdbslocale.dbs_dbsname " +
-                                         "ORDER BY sysdatabases.name;";
-
-                    IfxDataReader reader = (IfxDataReader)ifxConnection.readQuery(commandText);
-
-                    // reader.HasRows was returning FALSE on some machines when there were rows returned
-                    while ((reader != null) && reader.Read())
-                    {
-                        String dbName = reader[0].ToString().Trim();
-                        String dbOwner = reader[1].ToString().Trim();
-                        String dbEncoding = reader[2].ToString().Trim();
-                        if (!dbName.StartsWith("sys"))
-                        {
-                            sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
-                        }
-                    }
-
-                    conn.Close();
-                    conn.Dispose();
-
-                }                
-                catch (IfxException ex)
-                {
-                    MessageBox.Show("Failed opening connection: " + ex);
-                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
-                    return;
-                }
-                catch (TypeInitializationException ex)
-                {
-                    MessageBox.Show("Failed opening connection: " + ex);
-                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Failed opening connection: " + ex);
-                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
-                    return;
-                }
-
-            }            
-
-            this.databases.Items.Clear();
-            foreach (ComboBoxDatabase db in sortedDBs)
-            {
-                this.databases.Items.Add(db);
-            }
-            // filter when called normally
-            if (sender != null)
-                textBox_filterDBs_TextChanged(null, null);
-            TextBlockStatus.Text = "Server " + currentDBServer + " hat " + databases.Items.Count + " Datenbanken verfügbar.";
-        }        
+        }                
 
         private void hisProduct_Loaded(object sender, RoutedEventArgs e)
         {
@@ -659,14 +524,14 @@ namespace DB2GX
                 comboBoxEncoding.Items.Add(PGANSI);
                 comboBoxEncoding.Items.Add(PGUNICODE);
             }
-            else
+            else // Informix
             {
                 int itemNum = comboBoxEncoding.Items.Add(((ComboBoxDatabase)(databases.SelectedItem)).Encoding.ToString());
                 comboBoxEncoding.SelectedIndex = itemNum;
             }
 
             String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
-            String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;                      
+            String dbServerName = textBox_Server.Text;                      
             String entryName = dbServerName + "-" + dbName;
 
             if (entryName.Length > 30)
@@ -682,9 +547,9 @@ namespace DB2GX
 
         private DBConnection DBConnectionSetup()
         {
-            if ((databases.SelectedItem == null) || (databaseServers.SelectedItem == null))
+            if ((databases.SelectedItem == null) || ((databaseServers.SelectedItem == null) && (this.textBox_Server.Text == "")))
                 return null;
-            String dbServerName = ((ComboBoxServer)(databaseServers.SelectedItem)).ServerName;
+            String dbServerName = textBox_Server.Text;
             String dbServerPort = textBox_Port.Text;
             String dbName = ((ComboBoxDatabase)(databases.SelectedItem)).Name;
 
@@ -756,6 +621,172 @@ namespace DB2GX
             databaseServers_SelectionChanged(sender, null);
         }
 
+        private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (databaseServers.SelectedItem == null)
+                return;
+            String currentDBServer = ((ComboBoxServer)databaseServers.SelectedItem).ServerName;
+            textBox_Server.Text = currentDBServer;
+            serverSelectionChanged(sender);
+            
+        }
+
+        private void textBox_Server_LostFocus(object sender, RoutedEventArgs e)
+        {            
+            serverSelectionChanged(sender);
+            databaseServers.SelectedIndex = -1;
+        }
+
+
+        private void textBox_Server_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            //erik
+        }
+
+        private void serverSelectionChanged(object sender)
+        {
+            databases.Items.Clear();
+
+            ArrayList sortedDBs = new ArrayList();
+
+            String currentDBServer = textBox_Server.Text;
+            String currentDBServerPort = "";
+
+
+            if (textBox_Port.Text == "")
+            {
+                if (databaseServers.SelectedItem != null)
+                    currentDBServerPort = ((ComboBoxServer)databaseServers.SelectedItem).Port;
+                else
+                    currentDBServerPort = textBox_Port.Text;
+                textBox_Port.Text = currentDBServerPort;
+            }
+            else
+                currentDBServerPort = textBox_Port.Text;
+
+            TextBlockStatus.Text = "Verfügbare Datenbanken werden in " + currentDBServer + " gesucht.";
+
+            if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
+            {
+                this.databases.Items.Clear();
+                this.hisProduct.Items.Clear();
+                this.comboBoxEncoding.Items.Clear();
+
+                DBConnection pgConnection = new DBConnection(DBConnection.DBType.Postgres);
+                NpgsqlConnection sqlConx = (NpgsqlConnection)pgConnection.openPGConnection(currentDBServer, "postgres", currentDBServerPort, getHisProduct(), false);
+
+                if (sqlConx == null)
+                {
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
+                }
+
+                DataTable tblDatabases = sqlConx.GetSchema("Databases");
+                DataView view = tblDatabases.DefaultView;
+                view.Sort = "database_name";
+
+                sqlConx.Close();               
+
+                foreach (DataRowView row in view)
+                {
+                    try
+                    {
+                        String dbName = row["database_name"].ToString().Trim();
+                        String dbOwner = row["owner"].ToString().Trim();
+                        String dbEncoding = row["encoding"].ToString().Trim();
+
+                        if ((dbName != "postgres") && (dbName != "template0") && (dbName != "template1") && (dbName != "latin1"))
+                        {
+                            sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error: " + ex.Message);
+                        return;
+                    }
+                }
+            }
+            else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
+            {
+
+                String currentInformixServer = ((ComboBoxServer)databaseServers.SelectedItem).InformixServer;
+
+                if (!SQLHosts.EntryExists(currentInformixServer))
+                {
+                    SQLHosts.CreateEntry(currentInformixServer, currentDBServer, currentDBServerPort);
+                }
+
+                try
+                {
+                    DBConnection ifxConnection = new DBConnection(DBConnection.DBType.Informix);
+
+                    IfxConnection conn = (IfxConnection)ifxConnection.openIfxConnection(currentDBServer, currentInformixServer, "sysmaster", currentDBServerPort, getHisProduct(), "", false);
+
+                    if (conn == null)
+                    {
+                        TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                        return;
+                    }
+
+                    String commandText = "SELECT sysdatabases.name, sysdatabases.owner, sysdbslocale.dbs_collate " +
+                                         "FROM sysdbslocale INNER JOIN sysdatabases ON sysdatabases.name = sysdbslocale.dbs_dbsname " +
+                                         "ORDER BY sysdatabases.name;";
+
+                    IfxDataReader reader = (IfxDataReader)ifxConnection.readQuery(commandText);
+
+                    // reader.HasRows was returning FALSE on some machines when there were rows returned
+                    while ((reader != null) && reader.Read())
+                    {
+                        String dbName = reader[0].ToString().Trim();
+                        String dbOwner = reader[1].ToString().Trim();
+                        String dbEncoding = reader[2].ToString().Trim();
+                        if (!dbName.StartsWith("sys"))
+                        {
+                            sortedDBs.Add(new ComboBoxDatabase(dbName, dbOwner, dbEncoding));
+                        }
+                    }
+
+                    conn.Close();
+                    conn.Dispose();
+
+                }
+                catch (IfxException ex)
+                {
+                    MessageBox.Show("Failed opening connection: " + ex);
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
+                }
+                catch (TypeInitializationException ex)
+                {
+                    MessageBox.Show("Failed opening connection: " + ex);
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed opening connection: " + ex);
+                    TextBlockStatus.Text = "Datenbank Verbindung fehlgeschlagen!";
+                    return;
+                }
+
+            }
+
+            this.databases.Items.Clear();
+            foreach (ComboBoxDatabase db in sortedDBs)
+            {
+                this.databases.Items.Add(db);
+            }
+            // filter when called normally
+            if (sender != null)
+                textBox_filterDBs_TextChanged(null, null);
+            TextBlockStatus.Text = "Server " + currentDBServer + " hat " + databases.Items.Count + " Datenbanken verfügbar.";
+        }
+
+        private void textBox_Server_TextChanged_1(object sender, TextChangedEventArgs e)
+        {
+
+        }
     }
 
     public class DBConnection
