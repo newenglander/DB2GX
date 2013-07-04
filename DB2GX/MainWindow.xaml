@@ -16,8 +16,8 @@
         </StatusBar>
         <ListBox DataContext="{Binding}" DisplayMemberPath="" Height="42" HorizontalAlignment="Left" ItemsSource="{Binding}" Margin="91,18,0,0" Name="comboBoxDBType" VerticalAlignment="Top" Width="232" Loaded="comboBoxDBType_Loaded" SelectionChanged="comboBoxDBType_SelectionChanged" Grid.ColumnSpan="2" TabIndex="10" />
         <ListBox Height="69" HorizontalAlignment="Left" Margin="91,70,0,0" Name="databaseServers" VerticalAlignment="Top" Width="232" Loaded="databaseServers_Loaded" SelectionChanged="databaseServers_SelectionChanged" DataContext="{Binding}" ItemsSource="{Binding}" DisplayMemberPath="Name" SelectedValuePath="Value" Grid.ColumnSpan="2" TabIndex="20" />
-        <ListBox Height="70" HorizontalAlignment="Left" Margin="91,274,0,0" Name="databases" VerticalAlignment="Top" Width="232" ItemsSource="{Binding}" SelectionChanged="databases_SelectionChanged" Grid.ColumnSpan="2" DisplayMemberPath="Name" TabIndex="40" />
-        <ListBox Height="54" HorizontalAlignment="Left" Margin="91,349,0,0" Name="hisProduct" VerticalAlignment="Top" Width="232" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" Grid.ColumnSpan="2" TabIndex="50" />
+        <TextBox Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Right" Margin="0,145,399,0" Name="textBox_Server" TabIndex="30" VerticalAlignment="Top" Width="232" LostFocus="textBox_Server_LostFocus" TextChanged="textBox_Server_TextChanged" />
+        <TextBox Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Margin="92,187,0,0" Name="textBox_Port" TabIndex="30" VerticalAlignment="Top" Width="230" LostFocus="textBox_Port_LostFocus" />        
         <Label Content="Server" Height="57" HorizontalAlignment="Left" Margin="17,70,0,0" Name="label1" VerticalAlignment="Top" Width="80" />
         <Label Content="Datenbank" Height="28" HorizontalAlignment="Left" Margin="17,274,0,0" Name="label2" VerticalAlignment="Top" Width="80" />
         <Label Content="GX Produkt" Height="28" HorizontalAlignment="Left" Margin="17,355,0,0" Name="label3" VerticalAlignment="Top" Width="80" />
@@ -36,16 +36,16 @@
                 <Label Content="Database/&#x0a;ODBC" Height="42" HorizontalAlignment="Left" Margin="6,316,0,0" Name="label11" VerticalAlignment="Top" Width="80" />
             </Grid>
         </GroupBox>
-        <CheckBox Content="Benutzerdatenbanken Laden (Hintergrund)" Height="16" HorizontalAlignment="Left" Margin="38,217,0,0" Name="checkBoxLoadUserDBs" VerticalAlignment="Top" Checked="checkBox1_Checked" Unchecked="checkBox1_Unchecked" />        
-        <ListBox Height="39" HorizontalAlignment="Left" Margin="91,409,0,0" Name="comboBoxEncoding" VerticalAlignment="Top" Width="232" Loaded="comboBoxEncoding_Loaded" Grid.ColumnSpan="2" IsEnabled="True" TabIndex="2147483647" />
+        <CheckBox Content="Benutzerdatenbanken Laden (Hintergrund)" Height="16" HorizontalAlignment="Left" Margin="38,217,0,0" Name="checkBoxLoadUserDBs" VerticalAlignment="Top" Checked="checkBox1_Checked" Unchecked="checkBox1_Unchecked" />                
         <Label Content="Encoding" Height="28" HorizontalAlignment="Left" Margin="17,415,0,0" Name="label4" VerticalAlignment="Top" Width="80" TabIndex="2147483647" />
         <Label Content="Typ" Height="28" HorizontalAlignment="Left" Margin="17,24,0,0" Name="label5" VerticalAlignment="Top" Width="80" />
         <TextBox Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Margin="91,238,0,0" Name="textBox_filterDBs" VerticalAlignment="Top" Width="230" TextChanged="textBox_filterDBs_TextChanged" TabIndex="30" />
-        <Label Content="Filter" Height="30" HorizontalAlignment="Left" Margin="17,238,0,0" Name="label6" VerticalAlignment="Top" Width="74" />
+        <ListBox Height="70" HorizontalAlignment="Left" Margin="91,274,0,0" Name="databases" VerticalAlignment="Top" Width="232" ItemsSource="{Binding}" SelectionChanged="databases_SelectionChanged" Grid.ColumnSpan="2" DisplayMemberPath="Name" TabIndex="30" />
+        <ListBox Height="54" HorizontalAlignment="Left" Margin="91,349,0,0" Name="hisProduct" VerticalAlignment="Top" Width="232" Loaded="hisProduct_Loaded" ItemsSource="{Binding}" Grid.ColumnSpan="2" TabIndex="30" />
+        <ListBox Height="39" HorizontalAlignment="Left" Margin="91,409,0,0" Name="comboBoxEncoding" VerticalAlignment="Top" Width="232" Loaded="comboBoxEncoding_Loaded" Grid.ColumnSpan="2" IsEnabled="True" TabIndex="30" />
         <TextBox Height="30" HorizontalAlignment="Right" Margin="0,457,399,0" Name="textBoxConnectionName" TabIndex="30" VerticalAlignment="Top" Width="232" Grid.ColumnSpan="2" />
-        <Label Content="Name" Height="30" HorizontalAlignment="Left" Margin="17,457,0,0" Name="label12" VerticalAlignment="Top" Width="74" />
-        <TextBox Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Left" Margin="92,187,0,0" Name="textBox_Port" TabIndex="30" VerticalAlignment="Top" Width="230" LostFocus="textBox_Port_LostFocus" />
-        <Label Content="Port" Height="30" HorizontalAlignment="Left" Margin="18,187,0,0" Name="label13" VerticalAlignment="Top" Width="74" />
-        <TextBox Grid.ColumnSpan="2" Height="30" HorizontalAlignment="Right" Margin="0,145,399,0" Name="textBox_Server" TabIndex="30" VerticalAlignment="Top" Width="232" LostFocus="textBox_Server_LostFocus" TextChanged="textBox_Server_TextChanged" />
+        <Label Content="Filter" Height="30" HorizontalAlignment="Left" Margin="17,238,0,0" Name="label6" VerticalAlignment="Top" Width="74" />        
+        <Label Content="Name" Height="30" HorizontalAlignment="Left" Margin="17,457,0,0" Name="label12" VerticalAlignment="Top" Width="74" />        
+        <Label Content="Port" Height="30" HorizontalAlignment="Left" Margin="18,187,0,0" Name="label13" VerticalAlignment="Top" Width="74" />        
     </Grid>
 </Window>

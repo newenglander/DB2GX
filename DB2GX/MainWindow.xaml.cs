@@ -248,8 +248,9 @@ namespace DB2GX
 
                 // create registry entries
                 RegistryManager.CreateEntry(hisProductName, entryName, dbServerName, dbName, comboBoxDBType.SelectedItem.ToString());
-
-                TextBlockStatus.Text = "Datenbank " + dbName + " erfolgreich eingerichtet; Verfügbar über Eintrag " + entryName + ".";
+                
+                TextBlockStatus.Text = "Datenbank " + dbName + " für die Benutzung mit GX erfolgreich eingerichtet; Verfügbar über Eintrag " + entryName + ".";
+                MessageBox.Show(TextBlockStatus.Text, "Erfolgreich eingerichtet");
                 // reload list for immediate deletion of new database
                 comboBox_delete_Loaded(null, null);
             }
@@ -618,7 +619,7 @@ namespace DB2GX
 
         private void textBox_Port_LostFocus(object sender, RoutedEventArgs e)
         {
-            databaseServers_SelectionChanged(sender, null);
+            serverSelectionChanged(sender);
         }
 
         private void databaseServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -632,9 +633,10 @@ namespace DB2GX
         }
 
         private void textBox_Server_LostFocus(object sender, RoutedEventArgs e)
-        {            
-            serverSelectionChanged(sender);
-            databaseServers.SelectedIndex = -1;
+        {
+            if ((databaseServers.SelectedIndex != -1) && ((ComboBoxServer)databaseServers.SelectedItem).Name != textBox_Server.Text)
+                databaseServers.SelectedIndex = -1; 
+            serverSelectionChanged(sender);            
         }
 
 
@@ -709,7 +711,8 @@ namespace DB2GX
             }
             else if (comboBoxDBType.SelectedItem.ToString() == DBINFORMIX)
             {
-
+                if (databaseServers.SelectedItem == null)
+                    return;
                 String currentInformixServer = ((ComboBoxServer)databaseServers.SelectedItem).InformixServer;
 
                 if (!SQLHosts.EntryExists(currentInformixServer))
