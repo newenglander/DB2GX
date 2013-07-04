@@ -508,6 +508,11 @@ namespace DB2GX
                 hisProduct.Items.Add(HISMBSGX + " (?????)");
                 hisProduct.Items.Add(HISSVAGX + " (?????)");
                 hisProduct.Items.Add(HISCOBGX + " (?????)");
+                TextBlockStatus.Text = "Keine Produktdatenbanken gefunden in " + ((ComboBoxDatabase)(databases.SelectedItem)).Name + ".";
+            }
+            else
+            {
+                TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + ((ComboBoxDatabase)(databases.SelectedItem)).Name + ".";
             }
 
             foreach (Object[] versionPair in allVersions)
@@ -516,8 +521,7 @@ namespace DB2GX
                 hisProduct.Items.Add(product + " (" + versionPair[1].ToString().Trim() + ")");
                 if (product == HISFSVGX)
                     hisProduct.Items.Add(HISMBSGX + " (" + versionPair[1].ToString().Trim() + ")");
-            }
-            TextBlockStatus.Text = hisProduct.Items.Count + " Produktdatenbanken gefunden in " + ((ComboBoxDatabase)(databases.SelectedItem)).Name + ".";
+            }            
 
             comboBoxEncoding.Items.Clear();
             if (comboBoxDBType.SelectedItem.ToString() == DBPOSTGRES)
